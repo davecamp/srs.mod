@@ -3,10 +3,6 @@ Strict
 Import pub.win32
 Import "d3dcommon_brl.bmx"
 
-Extern"Win32"
-Global GUIDFromStringW:Int(psz$w, pGuid:Byte Ptr)"Win32"
-EndExtern
-
 Const D3D11_SHVER_PIXEL_SHADER:Int = 0
 Const D3D11_SHVER_VERTEX_SHADER:Int = 1
 Const D3D11_SHVER_GEOMETRY_SHADER:Int = 2
