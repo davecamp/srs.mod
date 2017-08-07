@@ -17,6 +17,7 @@ Global D3DCompile(pSrcData:Byte Ptr,SrcDataSize,pSourceName:Byte Ptr,pDefines:By
 'Global D3DDisassemble10Effect()
 'Global D3DGetInputSignatureBlob()
 'Global D3DGetInputAndOutputSignatureBlob()
+Global D3DGetOutputSignatureBlob(pSrcData:Byte Ptr, srcDataSize:Int, ppSignatureBlob:ID3DBlob Var)"Win32" = GetProcAddress(_d3dcompiler, "D3DGetOutputSignatureBlob")
 'Global D3DStripShader()
 'Global D3DGetBlobPart()
 'Global D3DCompressShaders()

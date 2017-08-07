@@ -14,8 +14,16 @@ Const D3D11_USAGE_IMMUTABLE	= 1
 Const D3D11_USAGE_DYNAMIC	= 2
 Const D3D11_USAGE_STAGING	= 3
 
-Const D3D11_DEFAULT_STENCIL_READ_MASK = $FF
-Const D3D11_DEFAULT_STENCIL_WRITE_MASK = $FF
+Const D3D11_DEFAULT_STENCIL_READ_MASK:Byte = $FF
+Const D3D11_DEFAULT_STENCIL_WRITE_MASK:Byte = $FF
+
+Const D3D11_UAV_DIMENSION_UNKNOWN         = 0
+Const D3D11_UAV_DIMENSION_BUFFER          = 1
+Const D3D11_UAV_DIMENSION_TEXTURE1D       = 2
+Const D3D11_UAV_DIMENSION_TEXTURE1DARRAY  = 3
+Const D3D11_UAV_DIMENSION_TEXTURE2D       = 4
+Const D3D11_UAV_DIMENSION_TEXTURE2DARRAY  = 5
+Const D3D11_UAV_DIMENSION_TEXTURE3D       = 8
 
 Const D3D11_DSV_DIMENSION_UNKNOWN            = 0
 Const D3D11_DSV_DIMENSION_TEXTURE1D          = 1
@@ -413,6 +421,15 @@ Type D3D11_QUERY_DESC
 	Field MiscFlags
 EndType
 
+Type D3D11_SO_DECLARATION_ENTRY
+	Field Stream:Int
+	Field SemanticName:Byte Ptr
+	Field SemanticIndex:Int
+	Field StartComponent:Byte
+	Field ComponentCount:Byte
+	Field OutputSlot:Byte
+EndType
+
 Type D3D11_QUERY_DATA_TIMESTAMP_DISJOINT
 	Field Frequency:Long
 	Field Disjoint
@@ -482,6 +499,31 @@ EndType
 Type D3D11_FEATURE_DATA_FORMAT_SUPPORT
 	Field InFormat
 	Field OutFormatSupport
+EndType
+
+Type D3D11_UNORDERED_ACCESS_VIEW_DESC
+	Rem
+	use either
+		D3D11_UNORDERED_ACCESS_VIEW_TEXTURE_DESC
+	or
+		D3D11_UNORDERED_ACCESS_VIEW_BUFFER_DESC
+	EndRem
+EndType
+
+Type D3D11_UNORDERED_ACCESS_VIEW_TEXTURE_DESC
+	Field Format:Int
+	Field ViewDimension:Int
+	Field Texture_MipSlice:Int
+	Field Texture_FirstArraySlice:Int
+	Field Texture_ArraySize:Int
+EndType
+
+Type D3D11_UNORDERED_ACCESS_VIEW_BUFFER_DESC
+	Field Format:Int
+	Field ViewDimension:Int
+	Field FirstElement:Int
+	Field NumElements:Int
+	Field Flags:Int
 EndType
 
 Global IID_ID3D11DeviceChild[]			=[$1841e5c8,$489b16b0,$cf44c8bc,$aeded5b0]
