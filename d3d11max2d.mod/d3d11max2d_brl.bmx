@@ -1030,12 +1030,12 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 			_ovalarray[index+5] = yy
 					
 			i:+1
-			th#=-i*360.0/segs
-			x#=x0+Cos(th)*xr
-			y#=y0-Sin(th)*yr
+			th=-i*360.0/segs
+			x=x0+Cos(th)*xr
+			y=y0-Sin(th)*yr
 			
-			xx#=x*_ix+y*_iy+tx
-			yy#=x*_jx+y*_jy+ty
+			xx=x*_ix+y*_iy+tx
+			yy=x*_jx+y*_jy+ty
 
 			_ovalarray[index+8] = xx
 			_ovalarray[index+9] = yy
@@ -1052,13 +1052,12 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		
 		Local stride = 16
 		Local offset = 0
-		
 		_d3d11devcon.VSSetShader(_vertexshader,Null,0)
 		_d3d11devcon.PSSetShader(_colorpixelshader,Null,0)
 		_d3d11devcon.PSSetConstantBuffers(0,1,Varptr _psfbuffer)
 		_d3d11devcon.IASetInputLayout(_max2dlayout)
 		_d3d11devcon.IASetVertexBuffers(0,1,Varptr _ovalbuffer,Varptr stride,Varptr offset)
-		_d3d11devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
+		_d3d11devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP)
 		_d3d11devcon.Draw(segs*3,0)
 		
 		ResetScreenRotationScale
