@@ -1,10 +1,14 @@
 Strict
 
+Import "-lOle32"
+
 Import Pub.Win32
 Import "d3dcommon_common.bmx"
 
-Global Rpcrt4Dll:Long = LoadLibraryA("Rpcrt4.dll")
-Global UuidFromStringW:Int(psz$w, pUuid:Byte Ptr)"Win32" = GetProcAddress(Rpcrt4Dll, "UuidFromStringW")
+Extern"win32"
+Function StringFromIID(rclsid:Byte Ptr, lplpsz:Byte Ptr)
+Function IIDFromString(lpsz$w, lpiid:Byte Ptr)
+EndExtern
 
 Extern "win32"
 Type ID3DBlob Extends IUnknown
