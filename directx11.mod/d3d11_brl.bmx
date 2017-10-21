@@ -4,7 +4,7 @@ Import Pub.Win32
 
 Import "DXGI_brl.bmx"
 Import "d3dcommon_brl.bmx"
-Import "d3d11_common.bmx"
+Import "d3d11.bmx"
 
 
 Extern"win32"

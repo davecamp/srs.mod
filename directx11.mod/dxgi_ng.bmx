@@ -3,7 +3,7 @@ SuperStrict
 Import Pub.Win32
 Import BRL.System
 
-Import "dxgi_common.bmx"
+Import "dxgi.bmx"
 
 Type DXGI_SWAP_CHAIN_DESC
 	Field BufferDesc_Width:Int

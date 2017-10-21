@@ -1,7 +1,7 @@
 Strict
 
 Import pub.win32
-Import "d3dcommon_brl.bmx"
+Import "d3dcommon_ng.bmx"
 
 Const D3D11_SHVER_PIXEL_SHADER:Int = 0
 Const D3D11_SHVER_VERTEX_SHADER:Int = 1
@@ -186,7 +186,7 @@ Type D3D11_PARAMETER_DESC
 EndType
 
 Extern"Win32"
-Type ID3D11ShaderReflectionType Extends IUnknown
+Type ID3D11ShaderReflectionType
 	Method GetDesc:Int(pDesc:Byte Ptr)
 	Method GetMemberTypeByIndex:ID3D11ShaderReflectionType(index:Int)
 	Method GetMemberTypeByName:ID3D11ShaderReflectionType(Name:Byte Ptr)
@@ -200,20 +200,20 @@ Type ID3D11ShaderReflectionType Extends IUnknown
 	Method ImplementsInterface:Int(pBase:ID3D11ShaderReflectionType)
 EndType
 
-Type ID3D11ShaderReflectionVariable Extends IUnknown
+Type ID3D11ShaderReflectionVariable
 	Method GetDesc:Int(pDesc:Byte Ptr)
 	Method GetType:ID3D11ShaderReflectionType()
 	Method GetBuffer:ID3D11ShaderReflectionConstantBuffer()
 	Method GetInterfaceSlot:Int(uArrayIndex:Int)
 EndType
 
-Type ID3D11ShaderReflectionConstantBuffer Extends IUnknown
+Type ID3D11ShaderReflectionConstantBuffer
 	Method GetDesc:Int(pDesc:Byte Ptr)
 	Method GetVariableByIndex:ID3D11ShaderReflectionVariable(index:Int)
 	Method GetVariableByName:ID3D11ShaderReflectionVariable(name:Byte Ptr)
 EndType
 
-Type ID3D11ShaderReflection Extends IUnknown
+Type ID3D11ShaderReflection Extends IUnknown_
 	Method GetDesc:Int(pDesc:Byte Ptr)
 	Method GetConstantBufferByIndex:ID3D11ShaderReflectionConstantBuffer(index:Int)
 	Method GetConstantBufferByName:ID3D11ShaderReflectionConstantBuffer(name:Byte Ptr)
@@ -235,12 +235,12 @@ Type ID3D11ShaderReflection Extends IUnknown
 	Method GetRequiresFlags:Int()
 EndType
 
-Type ID3D11LibraryReflection Extends IUnknown
+Type ID3D11LibraryReflection Extends IUnknown_
 	Method GetDesc:Int(pDesc:Byte Ptr)
 	Method GetFunctionByIndex:ID3D11FunctionReflection(FunctionIndex:Int)
 EndType
 
-Type ID3D11FunctionReflection Extends IUnknown
+Type ID3D11FunctionReflection
 	Method GetConstantBufferByIndex:ID3D11ShaderReflectionConstantBuffer(index:Int)
 	Method GetConstantBufferByName:ID3D11ShaderReflectionConstantBuffer(name:Byte Ptr)
 	Method GetResourceBindingDesc:Int(ResourceIndex:Int, pDesc:Byte Ptr)
@@ -249,15 +249,15 @@ Type ID3D11FunctionReflection Extends IUnknown
 	Method GetFunctionParameter:ID3D11FunctionParameterReflection(parameterIndex:Int)
 EndType
 
-Type ID3D11FunctionParameterReflection Extends IUnknown
+Type ID3D11FunctionParameterReflection
 	Method GetDesc:Int(pDesc:Byte Ptr)
 EndType
 
-Type ID3D11Module Extends IUnknown
+Type ID3D11Module Extends IUnknown_
 	Method CreateInstance:Int(pNamespace:Byte Ptr, ppModuleInstance:ID3D11ModuleInstance Var)
 EndType
 
-Type ID3D11ModuleInstance Extends IUnknown
+Type ID3D11ModuleInstance Extends IUnknown_
 	Method BindConstantBuffer:Int(uSrcSlot:Int, uDstSlot:Int, cbDstOffset:Int)
 	Method BindConstantBufferByName:Int(pName:Byte Ptr, uDstSlot:Int, cbDstOffset:Int)
 	Method BindResource:Int(uSrcSlot:Int, uDstSlot:Int, uCount:Int)
@@ -270,16 +270,16 @@ Type ID3D11ModuleInstance Extends IUnknown
 	Method BindResourceAsUnorderedAccessViewByName:Int(pSrvName:Byte Ptr, uDstUavSloat:Int, uCount:Int)
 EndType
 
-Type ID3D11Linker Extends IUnknown
+Type ID3D11Linker Extends IUnknown_
 	Method Link:Int(pEntry:ID3D11ModuleInstance, pEntryName:Byte Ptr, pTargetName:Byte Ptr, uFlags:Int, ppShaderBlob:ID3DBlob Ptr, ppErrorBuffer:ID3DBlob Ptr)
 	Method UseLibrary:Int(pLibraryMI:ID3D11ModuleInstance)
 	Method AddClipPlaneFromCBuffer:Int(uCBufferSlot:Int, uCBufferEntry:Int)
 EndType
 
-Type ID3D11LinkingNode Extends IUnknown
+Type ID3D11LinkingNode Extends IUnknown_
 EndType
 
-Type ID3D11FunctionLinkingGraph Extends IUnknown
+Type ID3D11FunctionLinkingGraph Extends IUnknown_
 	Method CreateModuleInstance:Int(ppModuleInstance:ID3D11ModuleInstance Ptr, ppErrorBuffer:ID3DBlob Ptr)
 	Method SetInputSignature:Int(pInputParameters:Byte Ptr, cInputParameters:Int, ppInputMode:ID3D11LinkingNode Ptr)
 	Method SetOutputSignature:Int(pOutputParameters:Byte Ptr, cOutputParameters:Int, ppOutputNode:ID3D11LinkingNode Ptr)

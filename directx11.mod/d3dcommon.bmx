@@ -218,10 +218,4 @@ Type D3D_SHADER_MACRO
 	Field Definition:Byte Ptr
 EndType
 
-Extern "win32"
-Type ID3DBlob Extends IUnknown
-	Method GetBufferPointer:Byte Ptr()
-	Method GetBufferSize()
-EndType
-EndExtern
 

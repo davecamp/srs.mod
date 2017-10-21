@@ -3,8 +3,8 @@ SuperStrict
 Import Pub.Win32
 
 Import "dxgi_ng.bmx"
-Import "d3dcommon_ng.bmx"
-Import "d3d11_common.bmx"
+Import "d3dcommon.bmx"
+Import "d3d11.bmx"
 
 Extern"win32"
 

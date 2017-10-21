@@ -2,16 +2,19 @@ Strict
 
 Module SRS.DirectX11
 
-' Included compatability for BlitzMaxNG. To do this for the already existing module 
-'	it was easier and cleaner to create a compiler switch and just import the correct
-'	files needed.
-
 ?Not bmxng
-Import "directx11_brl.bmx"
+Import "d3d11_brl.bmx"
+Import "dxgi_brl.bmx"
+Import "d3dcommon_brl.bmx"
+Import "d3dcompiler_brl.bmx"
+Import "d3d11shader_brl.bmx"
 ?
 
 ?bmxng
-Import "directx11_ng.bmx"
+Import "d3d11_ng.bmx"
+Import "dxgi_ng.bmx"
+Import "d3dcommon_ng.bmx"
+Import "d3dcompiler_ng.bmx"
+Import "d3d11shader_ng.bmx"
 ?
 
-Import "d3d11shader.bmx"
