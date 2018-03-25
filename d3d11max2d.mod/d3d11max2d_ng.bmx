@@ -115,7 +115,7 @@ Type TD3D11RingBuffer
 			End
 		EndIf
 		
-		MemCopy mRes.pData+_ringPos,Data,SizeOf(Data)
+		MemCopy mRes.pData+_ringPos,Data,Size_T(SizeOf(Data))
 		_d3d11devcon.UnMap(_buffer,0)
 		
 		_ringPos :+ SizeOf(Data)
@@ -167,7 +167,7 @@ Function MapBuffer:Int(Buffer:ID3D11Buffer Var,SubresourceIndex:Int,MapType:Int,
 		'For Local i = 0 Until Size
 		'	Map.pData[i] = Data[i]
 		'Next
-		MemCopy Map.pData,Data,Size
+		MemCopy Map.pData,Data,Size_T(Size)
 		_d3d11devcon.UnMap(Buffer,SubresourceIndex)
 	EndIf
 	Return True
@@ -1261,7 +1261,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 			For Local h:Int = 0 Until pixmap.height
 				Local dst:Byte Ptr = pixmap.pixels + h*pixmap.pitch
 				Local src:Byte Ptr = _map.pData+(x Shl 2 + (y*_map.RowPitch))+h*_map.RowPitch
-				MemCopy dst,src,pixmap.pitch
+				MemCopy dst,src,Size_T(pixmap.pitch)
 			Next
 		_d3d11devcon.UnMap(pTex,0)
 		
