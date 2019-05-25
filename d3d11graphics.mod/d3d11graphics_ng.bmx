@@ -375,6 +375,9 @@ Type TD3D11Graphics Extends TGraphics
 		ar.unk = unk
 		_release.AddLast ar
 	EndMethod
+	
+	Method Resize:Int(Width:Int, Height:Int) override
+	EndMethod
 EndType
 
 Type TD3D11GraphicsDriver Extends TGraphicsDriver
