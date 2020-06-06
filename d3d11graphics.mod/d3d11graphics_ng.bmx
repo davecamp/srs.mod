@@ -34,7 +34,7 @@ Type TD3D11Release
 	Field unk:IUnknown_
 EndType
 
-Function D3D11WndProc:Byte Ptr( hwnd:Byte Ptr,MSG:UInt,wp:wparam,lp:lparam )"win32"
+Function D3D11WndProc:Byte Ptr( hwnd:Byte Ptr,MSG:UInt,wp:WParam,lp:LParam )"win32"
 	bbSystemEmitOSEvent hwnd,MSG,wp,lp,Null
 
 	Select MSG
@@ -142,13 +142,16 @@ Type TD3D11Graphics Extends TGraphics
 	EndMethod
 	
 	'TGraphics
-	Method GetSettings:Int( width:Int Var,height:Int Var,depth:Int Var,hertz:Int Var,flags:Int Var)
+	Method GetSettings:Int( width:Int Var,height:Int Var,depth:Int Var,hertz:Int Var,flags:Int Var, X:Int Var, Y:Int Var)
 		width = _width
 		height = _height
 		depth = _depth
 		hertz = _hertz
 		flags = _flags
 	EndMethod
+	
+	Method Position:Int(x:Int, y:Int)
+	End Method
 	
 	'TGraphics
 	Method Close:Int()
@@ -363,7 +366,7 @@ Type TD3D11Graphics Extends TGraphics
 		Return _FeatureLevel[0]
 	EndMethod
 
-	Method Reactivate(wp:wparam)
+	Method Reactivate(wp:WParam)
 		If Not _windowed
 			If _swapchain _swapchain.SetFullscreenState(Int wp,Null)
 			If Not wp ShowWindow _hwnd,SW_MINIMIZE				
@@ -376,7 +379,7 @@ Type TD3D11Graphics Extends TGraphics
 		_release.AddLast ar
 	EndMethod
 	
-	Method Resize:Int(Width:Int, Height:Int) override
+	Method Resize:Int(Width:Int, Height:Int) Override
 	EndMethod
 EndType
 
@@ -459,7 +462,7 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 		Return New TD3D11Graphics.Attach( hwnd , flags )
 	EndMethod
 	
-	Method CreateGraphics:TD3D11Graphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int )
+	Method CreateGraphics:TD3D11Graphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int, x:Int, y:Int )
 		Return New TD3D11Graphics.Create(width,height,depth,hertz,flags)
 	EndMethod
 	

@@ -758,8 +758,8 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		If g Return TMax2DGraphics.Create( g ,Self )
 	EndMethod
 	
-	Method CreateGraphics:TGraphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int )
-		Local g:TD3D11Graphics = D3D11GraphicsDriver().CreateGraphics(width,height,depth,hertz,flags)
+	Method CreateGraphics:TGraphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int, x:Int, y:Int )
+		Local g:TD3D11Graphics = D3D11GraphicsDriver().CreateGraphics(width,height,depth,hertz,flags, x ,y)
 		If Not g Return Null
 		Return TMax2DGraphics.Create(g,Self)
 	EndMethod
