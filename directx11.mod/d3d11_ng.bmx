@@ -284,9 +284,9 @@ Global _d3d11:Byte Ptr = LoadLibraryW("D3D11.dll")
 If Not _d3d11 Return False
 
 'Core
-Global D3D11CreateDevice:Byte Ptr(pAdapter:IDXGIAdapter,DriverType:Int,hSoftware:Byte Ptr,Flags:Int,pFeatureLevels:Byte Ptr,Featurelevels:Int,SDKVersion:Int,ppDevice:ID3D11Device Var,..
-			pFeatureLevel:Byte Ptr,ppImmediateContext:ID3D11DeviceContext Var)"win32"=GetProcAddress(_d3d11,"D3D11CreateDevice")
-Global D3D11CreateDeviceAndSwapChain:Byte Ptr(pAdapter:IDXGIAdapter,DriverType:Int,Software:Int,Flags:Int,pFeatureLevels:Byte Ptr,FeatureLevels:Int,SDKVersion:Int,pSwapChainDesc:Byte Ptr,..
+Global D3D11CreateDevice:Int(pAdapter:IDXGIAdapter, DriverType:Int, hSoftware:Byte Ptr, Flags:Int, pFeatureLevels:Int Ptr, Featurelevels:Int, SDKVersion:Int, ppDevice:ID3D11Device Var,..
+			pFeatureLevel:Int Ptr, ppImmediateContext:ID3D11DeviceContext Var)"win32" = GetProcAddress(_d3d11, "D3D11CreateDevice")
+Global D3D11CreateDeviceAndSwapChain:Int(pAdapter:IDXGIAdapter,DriverType:Int,Software:Int,Flags:Int,pFeatureLevels:Byte Ptr,FeatureLevels:Int,SDKVersion:Int,pSwapChainDesc:Byte Ptr,..
 			_pSwapChain:IDXGISwapChain Var,_ppDevice:ID3D11Device Var,pFeatureLevel:Byte Ptr,ppDeviceContext:ID3D11DeviceContext Var)"win32"=GetProcAddress(_d3d11,"D3D11CreateDeviceAndSwapChain")
 
 

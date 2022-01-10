@@ -128,7 +128,7 @@ Type TD3D11RingBuffer
 	EndMethod
 EndType
 
-Function CreateBuffer:Int(Buffer:ID3D11Buffer Var,ByteWidth:Int,Usage:Int,BindFlags:Int,CPUAccessFlags:Int,Data:Byte Ptr,Name$="")
+Function CreateBuffer:Int(Buffer:ID3D11Buffer Var,ByteWidth:Size_T,Usage:Int,BindFlags:Int,CPUAccessFlags:Int,Data:Byte Ptr,Name$="")
 	Local SubResourceData:D3D11_SUBRESOURCE_DATA
 	Local hr:Int
 
@@ -155,7 +155,7 @@ Function CreateBuffer:Int(Buffer:ID3D11Buffer Var,ByteWidth:Int,Usage:Int,BindFl
 	EndIf
 EndFunction
 
-Function MapBuffer:Int(Buffer:ID3D11Buffer Var,SubresourceIndex:Int,MapType:Int,MapFlags:Int,Data:Byte Ptr,Size:Int,Name$="")
+Function MapBuffer:Int(Buffer:ID3D11Buffer Var,SubresourceIndex:Int,MapType:Int,MapFlags:Int,Data:Byte Ptr,Size:Size_T,Name$="")
 	If Not Buffer Return 0
 
 	Local Map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
@@ -612,10 +612,10 @@ Type TD3D11ImageFrame Extends TImageFrame
 		SAFE_RELEASE(_rtv)
 	EndMethod
 
-	Method Draw:Int( x0#,y0#,x1#,y1#,tx#,ty#,sx#,sy#,sw#,sh# )
+	Method Draw( x0#,y0#,x1#,y1#,tx#,ty#,sx#,sy#,sw#,sh# )
 		_driver.AdjustScreenRotationScale tx,ty
 		
-		If Not _shaderready Return False
+		If Not _shaderready Return
 
 		Local u0#=sx*_uscale
 		Local v0#=sy*_vscale
@@ -753,18 +753,18 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		Return D3D11GraphicsDriver().GraphicsModes()
 	EndMethod
 	
-	Method AttachGraphics:TGraphics( hwnd:Byte Ptr,flags:Int )
+	Method AttachGraphics:TGraphics( hwnd:Byte Ptr,flags:Long )
 		Local g:TD3D11Graphics = D3D11GraphicsDriver().AttachGraphics( hwnd,flags )
 		If g Return TMax2DGraphics.Create( g ,Self )
 	EndMethod
 	
-	Method CreateGraphics:TGraphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int, x:Int, y:Int )
+	Method CreateGraphics:TGraphics( width:Int, height:Int, depth:Int, hertz:Int, flags:Long, x:Int, y:Int )
 		Local g:TD3D11Graphics = D3D11GraphicsDriver().CreateGraphics(width,height,depth,hertz,flags, x ,y)
 		If Not g Return Null
 		Return TMax2DGraphics.Create(g,Self)
 	EndMethod
 	
-	Method SetGraphics:Int( g:TGraphics )
+	Method SetGraphics( g:TGraphics )
 		If Not g
 			FreeD3D11Max2DResources
 			
@@ -784,6 +784,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 			EndIf
 					
 			_d3d11graphics = Null
+			_max2dGraphics = Null
 			TMax2DGraphics.ClearCurrent
 			D3D11GraphicsDriver().SetGraphics Null
 			
@@ -792,8 +793,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 			_ovalarray = New Float[0]
 			_linearray = New Float[0]
 			_tilearray = New Float[0]
-			
-			Return False
+			Return
 		EndIf
 		
 		_max2DGraphics = TMax2DGraphics( g )
@@ -823,8 +823,8 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		Return New TD3D11ImageFrame.Create(pixmap,flags)
 	EndMethod
 		
-	Method SetBlend:Int( blend:Int )
-		If _currblend = blend Return False
+	Method SetBlend( blend:Int )
+		If _currblend = blend Return
 
 		Local BF#[] = [0.0,0.0,0.0,0.0] 'Not utilised
 		Select blend
@@ -848,8 +848,8 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		_currblend = blend
 	EndMethod
 	
-	Method SetAlpha:Int( alpha# )
-		If alpha = _psflags[3] Return True
+	Method SetAlpha( alpha# )
+		If alpha = _psflags[3] Return
 
 		alpha=Max(Min(alpha,1),0) 'clamp 0.0 - 1.0
 		_psflags[3] = alpha
@@ -857,7 +857,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		MapBuffer(_psfbuffer,0,D3D11_MAP_WRITE_DISCARD,0,_psflags,SizeOf(_psflags))
 	EndMethod
 
-	Method SetColor:Int( red:Int,green:Int,blue:Int )
+	Method SetColor( red:Int,green:Int,blue:Int )
 		Local r:Int = Max(Min(red,255),0)
 		Local g:Int = Max(Min(green,255),0)
 		Local b:Int = Max(Min(blue,255),0)
@@ -869,7 +869,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		MapBuffer(_psfbuffer,0,D3D11_MAP_WRITE_DISCARD,0,_psflags,SizeOf(_psflags))
 	EndMethod
 
-	Method SetClsColor:Int( red:Int,green:Int,blue:Int )
+	Method SetClsColor( red:Int,green:Int,blue:Int )
 		Local r:Int = Max(Min(red,255),0)
 		Local g:Int = Max(Min(green,255),0)
 		Local b:Int = Max(Min(blue,255),0)
@@ -879,29 +879,29 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		_clscolor[2] = OneOver255 * b
 	EndMethod
 
-	Method SetViewport:Int( x:Int,y:Int,width:Int,height:Int )
+	Method SetViewport( x:Int,y:Int,width:Int,height:Int )
 		_d3d11devcon.RSSetScissorRects(1,[x,y,x+width,y+height])
 	EndMethod
 
-	Method SetTransform:Int( xx#,xy#,yx#,yy# )
+	Method SetTransform( xx#,xy#,yx#,yy# )
 		_ix = xx
 		_iy = xy
 		_jx = yx
 		_jy = yy
 	EndMethod
 
-	Method SetLineWidth:Int( width# )
+	Method SetLineWidth( width# )
 		_linewidth=width
 	EndMethod
 
-	Method Cls:Int()
+	Method Cls()
 		Local rtv:ID3D11RenderTargetView
 		_d3d11devcon.OMGetRenderTargets(1, Varptr rtv, Null)
 		_d3d11devcon.ClearRenderTargetView( rtv , _clscolor )
 		rtv.release_
 	EndMethod
 
-	Method Plot:Int( x#,y# )
+	Method Plot( x#,y# )
 		TransformPoint x,y
 		x :+ focus_x
 		y :+ focus_y
@@ -924,7 +924,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		_d3d11devcon.Draw(1,0)
 	EndMethod
 
-	Method DrawLine:Int( x0#,y0#,x1#,y1#,tx#,ty# )
+	Method DrawLine( x0#,y0#,x1#,y1#,tx#,ty# )
 		Local _verts#[16]
 		
 		TransformPoint x0,y0
@@ -957,7 +957,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 			_d3d11devcon.IASetVertexBuffers(0,1,Varptr _vertexbuffer,Varptr stride,Varptr offset)
 			_d3d11devcon.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST)
 			_d3d11devcon.Draw(2,0)
-			Return 0
+			Return
 		EndIf
 		
 		Local lw#=_lineWidth
@@ -988,7 +988,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		_d3d11devcon.Draw(4,0)
 	EndMethod
 
-	Method DrawRect:Int( x0#,y0#,x1#,y1#,tx#,ty# )
+	Method DrawRect( x0#,y0#,x1#,y1#,tx#,ty# )
 		Local _verts#[16]
 		
 		AdjustScreenRotationScale tx,ty
@@ -1018,7 +1018,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		ResetScreenRotationScale
 	EndMethod
 
-	Method DrawOval:Int(x0#,y0#,x1#,y1#,tx#,ty#)
+	Method DrawOval(x0#,y0#,x1#,y1#,tx#,ty#)
 		Local BuildBuffer:Int=False
 
 		AdjustScreenRotationScale tx,ty
@@ -1095,10 +1095,10 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		ResetScreenRotationScale
 	EndMethod
 
-	Method DrawPoly:Int( inverts#[],handlex#,handley#,tx#,ty# )
+	Method DrawPoly( inverts#[],handlex#,handley#,tx#,ty# )
 		AdjustScreenRotationScale tx,ty
 		
-		If inverts.length<6 Or (inverts.length&1) Return 0
+		If inverts.length<6 Or (inverts.length&1) Return
 		Local nv:Int=inverts.length/2
 		Local numpolys:Int = nv-2
 		
@@ -1158,7 +1158,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		ResetScreenRotationScale
 	EndMethod
 
-	Method DrawPixmap:Int( pixmap:TPixmap,x0:Int,y0:Int )
+	Method DrawPixmap( pixmap:TPixmap,x0:Int,y0:Int )
 		Local pTex:ID3D11Texture2D
 		Local pTexDesc:D3D11_TEXTURE2D_DESC = New D3D11_TEXTURE2D_DESC
 		
@@ -1192,7 +1192,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 
 		If _d3d11dev.CreateTexture2D(pTexDesc,desc,pTex)<0
 			WriteStdout "DrawPixmap Error - Cannot create texture!~n"
-			Return 0
+			Return
 		EndIf
 		
 		Local pmverts#[] = [Float(x0),Float(y0),0.0,0.0,..
@@ -1212,7 +1212,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		
 		If _d3d11dev.CreateShaderResourceView(pTex,srdesc,pmsrv)<0
 			WriteStdout "Cannot create ShaderResourceView for pixamp texture~n"
-			Return 0
+			Return
 		EndIf
 		
 		Local stride:Int = 16
@@ -1272,7 +1272,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		Return pixmap
 	EndMethod
 
-	Method SetResolution:Int( w#,h# )
+	Method SetResolution( w#,h# )
 		_matrixproj = [2.0/w,0.0,0.0,-1-(1.0/w),..
 				0.0,-2.0/h,0.0,1+(1.0/h),..
 				0.0,0.0,1.0,0.0,..

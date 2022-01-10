@@ -28,7 +28,7 @@ Global _release:TList
 Global _windowed:Int
 Global _fps:Int
 Global _d3d11Refs:Int
-Global _featurelevel:Int[1]
+Global _featurelevel:Int
 
 Type TD3D11Release
 	Field unk:IUnknown_
@@ -62,11 +62,11 @@ Function CreateD3D11Device:Int()
 	'?DEBUG
 	'	CreationFlag :| D3D11_CREATE_DEVICE_DEBUG
 	'?
-	If D3D11CreateDevice(Null,D3D_DRIVER_TYPE_HARDWARE,Null,CreationFlag,Null,0,D3D11_SDK_VERSION,_d3d11dev,_featurelevel,_d3d11devcon)<0
+	If D3D11CreateDevice(Null, D3D_DRIVER_TYPE_HARDWARE, Null, CreationFlag, Null, 0, D3D11_SDK_VERSION, _d3d11dev, Varptr _featurelevel, _d3d11devcon) < 0
 		Throw "Critical Error!~nCannot create D3D11Device"
 	EndIf
 	
-	If _FeatureLevel[0] < D3D_FEATURE_LEVEL_10_0
+	If _FeatureLevel < D3D_FEATURE_LEVEL_10_0
 		Throw	"Critical Error!~n"+..
 				"Make sure your GPU is Dx10/Dx11 compatible or~n"+..
 				"Make sure you have the latest drivers for your GPU."
@@ -113,7 +113,7 @@ EndFunction
 Public
 
 Function D3D11GetFeatureLevel:Int()
-	Return _featurelevel[0]
+	Return _featurelevel
 EndFunction
 
 Type TD3D11Graphics Extends TGraphics
@@ -142,7 +142,7 @@ Type TD3D11Graphics Extends TGraphics
 	EndMethod
 	
 	'TGraphics
-	Method GetSettings:Int( width:Int Var,height:Int Var,depth:Int Var,hertz:Int Var,flags:Int Var, X:Int Var, Y:Int Var)
+	Method GetSettings( width:Int Var,height:Int Var,depth:Int Var,hertz:Int Var,flags:Long Var, x:Int Var, y:Int Var )
 		width = _width
 		height = _height
 		depth = _depth
@@ -150,12 +150,12 @@ Type TD3D11Graphics Extends TGraphics
 		flags = _flags
 	EndMethod
 	
-	Method Position:Int(x:Int, y:Int)
+	Method Position(x:Int, y:Int)
 	End Method
 	
 	'TGraphics
-	Method Close:Int()
-		If Not _hwnd Return 0
+	Method Close()
+		If Not _hwnd Return
 	
 		If _swapchain _swapchain.SetFullScreenState False,Null
 		
@@ -170,7 +170,7 @@ Type TD3D11Graphics Extends TGraphics
 		_windowed = False
 	EndMethod
 	
-	Method Attach:TD3D11Graphics( hwnd:Byte Ptr ,flags:Int )
+	Method Attach:TD3D11Graphics( hwnd:Byte Ptr ,flags:Long )
 		Local rect:Int[4]
 		GetClientRect hwnd,rect
 		Local width:Int = rect[2]-rect[0]
@@ -188,7 +188,7 @@ Type TD3D11Graphics Extends TGraphics
 		Return Self
 	EndMethod
 	
-	Method Create:TD3D11Graphics(width:Int,height:Int,depth:Int,hertz:Int,flags:Int)
+	Method Create:TD3D11Graphics(width:Int,height:Int,depth:Int,hertz:Int,flags:Long)
 		If _depth Return Null 'Already have a window thats full screen
 
 		'register wndclass
@@ -257,7 +257,7 @@ Type TD3D11Graphics Extends TGraphics
 		Return Self
 	EndMethod
 	
-	Method CreateSwapChain(hwnd:Byte Ptr,width:Int,height:Int,depth:Int,hertz:Int,flags:Int)
+	Method CreateSwapChain(hwnd:Byte Ptr,width:Int,height:Int,depth:Int,hertz:Int,flags:Long)
 		Local FullScreenTarget:TGraphicsMode
 		Local numerator:Int = 0
 
@@ -363,7 +363,7 @@ Type TD3D11Graphics Extends TGraphics
 	EndMethod
 
 	Method GetFeatureLevel:Int()
-		Return _FeatureLevel[0]
+		Return _FeatureLevel
 	EndMethod
 
 	Method Reactivate(wp:WParam)
@@ -379,7 +379,7 @@ Type TD3D11Graphics Extends TGraphics
 		_release.AddLast ar
 	EndMethod
 	
-	Method Resize:Int(Width:Int, Height:Int) Override
+	Method Resize(Width:Int, Height:Int)
 	EndMethod
 EndType
 
@@ -397,9 +397,9 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 
 		'BUG FIX -	There's a bug in IDXGIAdapter.CheckInterfaceSupport incorrectly returning
 		'			that some valid DX11 cards don't support DX11.
-		_SupportLevels = [D3D_FEATURE_LEVEL_11_0,D3D_FEATURE_LEVEL_10_1,D3D_FEATURE_LEVEL_10_0]
-		If D3D11CreateDevice(Null,D3D_DRIVER_TYPE_HARDWARE,Null,D3D11_CREATE_DEVICE_SINGLETHREADED,..
-							_SupportLevels,3,D3D11_SDK_VERSION,_d3d11dev,Varptr _featureLevel[0],_d3d11devcon)<0
+		_SupportLevels = [D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0]
+		If D3D11CreateDevice(Null, D3D_DRIVER_TYPE_HARDWARE, Null, D3D11_CREATE_DEVICE_SINGLETHREADED,..
+							_SupportLevels, 3, D3D11_SDK_VERSION, _d3d11dev, Varptr _featureLevel, _d3d11devcon)<0
 			Return Null
 		EndIf
 		
@@ -458,15 +458,15 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 		Return _modes
 	EndMethod
 	
-	Method AttachGraphics:TD3D11Graphics( hwnd:Byte Ptr , flags:Int )
+	Method AttachGraphics:TD3D11Graphics( hwnd:Byte Ptr , flags:Long )
 		Return New TD3D11Graphics.Attach( hwnd , flags )
 	EndMethod
 	
-	Method CreateGraphics:TD3D11Graphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int, x:Int, y:Int )
+	Method CreateGraphics:TD3D11Graphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Long, x:Int, y:Int )
 		Return New TD3D11Graphics.Create(width,height,depth,hertz,flags)
 	EndMethod
 	
-	Method SetGraphics:Int( g:TGraphics )
+	Method SetGraphics( g:TGraphics )
 		_graphics = TD3D11Graphics( g )
 	
 		If _graphics
