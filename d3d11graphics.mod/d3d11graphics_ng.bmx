@@ -208,7 +208,9 @@ Type TD3D11Graphics Extends TGraphics
 		'centre window on screen
 		Local rect:Int[4]
 		If Not depth
-			wstyle = WS_VISIBLE|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX
+			If Not (flags & GRAPHICS_BORDERLESS)
+				wstyle = WS_VISIBLE|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX
+			EndIf
 
 			Local desktoprect:Int[4]
 
@@ -264,7 +266,7 @@ Type TD3D11Graphics Extends TGraphics
 		If depth
 			Local index:Int
 			For Local i:TGraphicsMode = EachIn GraphicsModes()
-				If width = i.Width
+				If width = i.width
 					If height = i.height
 						If depth = i.depth
 							If hertz = i.hertz
@@ -303,7 +305,7 @@ Type TD3D11Graphics Extends TGraphics
 		_sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
 		_sd.OutputWindow = hwnd
 		_sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD
-		_sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		_sd.flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 		_sd.SampleDesc_Count = 1
 		_sd.SampleDesc_Quality = 0
 
@@ -345,8 +347,8 @@ Type TD3D11Graphics Extends TGraphics
 
 		'Create a viewport
 		Local vp:D3D11_VIEWPORT = New D3D11_VIEWPORT
-		vp.Width = width
-		vp.Height = height
+		vp.width = width
+		vp.height = height
 		vp.MinDepth = 0.0
 		vp.MaxDepth = 1.0
 		vp.TopLeftX = 0.0
@@ -379,7 +381,7 @@ Type TD3D11Graphics Extends TGraphics
 		_release.AddLast ar
 	EndMethod
 	
-	Method Resize(Width:Int, Height:Int)
+	Method Resize(width:Int, height:Int)
 	EndMethod
 EndType
 
@@ -414,7 +416,7 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 			
 			'Don't include duplicates
 			For Local GMode:TGraphicsMode = EachIn _modes
-				If (Mode[0] = GMode.Width) And (Mode[1] = GMode.Height) ..
+				If (Mode[0] = GMode.width) And (Mode[1] = GMode.height) ..
 					And (Mode[2] = GMode.Depth) And (Mode[3] = GMode.Hertz)
 			
 					ModeFound = True
@@ -429,8 +431,8 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 
 				Local AllModes:TGraphicsMode[] = _modes
 				
-				_modes[_modes.Length-1].Width = Mode[0]
-				_modes[_modes.Length-1].Height = Mode[1]
+				_modes[_modes.Length-1].width = Mode[0]
+				_modes[_modes.Length-1].height = Mode[1]
 				_modes[_modes.Length-1].Depth = Mode[2]
 				_modes[_modes.Length-1].Hertz = Mode[3]
 		
@@ -471,8 +473,8 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 	
 		If _graphics
 			Local vp:D3D11_VIEWPORT = New D3D11_VIEWPORT
-			vp.Width = _graphics._width
-			vp.Height = _graphics._height
+			vp.width = _graphics._width
+			vp.height = _graphics._height
 			vp.MinDepth = 0.0
 			vp.MaxDepth = 1.0
 			vp.TopLeftX = 0.0
@@ -493,6 +495,10 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 			While _d3d11devcon.GetData(_query,Varptr queryData,4,0) = 1
 			Wend
 		EndIf
+	EndMethod
+	
+	Method ToString:String() Override
+		Return "TD3D11GraphicsDriver"
 	EndMethod
 EndType
 
