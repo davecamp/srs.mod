@@ -1,510 +1,651 @@
-Strict
+SuperStrict
 
 Import BRL.Graphics
 Import BRL.LinkedList
 Import BRL.Retro
 Import SRS.DirectX11
+Import SRS.Dxgi
 
 ?Win32
-Import "DeviceModeSettings.c"
 
-Private
+Function SAFE_RELEASE(pUnknown:IUnknown Var)
+	If pUnknown..
+		pUnknown.Release_()
+		
+	pUnknown = Null
+EndFunction
 
 Extern
-Function Dx11Max2D_EnumDisplaySettings(iModeNum,pMode:Byte Ptr)
+Function Dx11Max2D_EnumDisplaySettings(iModeNum:Int, pMode:Byte Ptr)
 EndExtern
 
-Global _graphics:TD3D11Graphics
-Global _driver:TD3D11GraphicsDriver
-Global _wndclass$ = "BBDX11Device Window Class"
-
-Global _modes:TGraphicsMode[]
-Global _d3d11dev:ID3D11Device
-Global _d3d11devcon:ID3D11DeviceContext
-Global _query:ID3D11Query
-Global _release:TList
-Global _windowed
-Global _fps
-Global _d3d11Refs
-Global _featurelevel[1]
-
-Type TD3D11Release
-	Field unk:IUnknown
+Type TD3D11GraphicsGpuResources	
+	Field Device:ID3D11Device
+	Field DeviceContext:ID3D11DeviceContext
+	
+	Field Swapchain:IDXGISwapChain1
+	Field BackBuffer:ID3D11RenderTargetView
+	
+	Method Close()
+		SAFE_RELEASE(BackBuffer)
+		SAFE_RELEASE(Swapchain)
+		SAFE_RELEASE(DeviceContext)
+		SAFE_RELEASE(Device)
+	EndMethod
 EndType
 
-Function D3D11WndProc( hwnd,MSG,wp,lp )"win32"
-	bbSystemEmitOSEvent hwnd,MSG,wp,lp,Null
-	
-	Select MSG
-	Case WM_CLOSE
-		Return
-	Case WM_SYSKEYDOWN
-		If wp<>KEY_F4 Return
-		
-	Case WM_ACTIVATE
-		If _graphics _graphics.Reactivate(wp)
-		Return 0
-	EndSelect
-	
-	Return DefWindowProcW( hwnd,MSG,wp,lp )
-End Function
-
-Function CreateD3D11Device()
-	If _d3d11Refs
-		_d3d11Refs:+1
-		Return True
-	EndIf
-		
-	Local CreationFlag = D3D11_CREATE_DEVICE_SINGLETHREADED
-	'?DEBUG
-	'	CreationFlag :| D3D11_CREATE_DEVICE_DEBUG
-	'?
-	If D3D11CreateDevice(Null,D3D_DRIVER_TYPE_HARDWARE,Null,CreationFlag,Null,0,D3D11_SDK_VERSION,_d3d11dev,_featurelevel,_d3d11devcon)<0
-		Throw "Critical Error!~nCannot create D3D11Device"
-	EndIf
-	
-	If _FeatureLevel[0] < D3D_FEATURE_LEVEL_10_0
-		Throw	"Critical Error!~n"+..
-				"Make sure your GPU is Dx10/Dx11 compatible or~n"+..
-				"Make sure you have the latest drivers for your GPU."
-	EndIf
-	
-	'QUERY
-	Local _querydesc:D3D11_QUERY_DESC = New D3D11_QUERY_DESC
-	_querydesc.Query = D3D11_QUERY_EVENT
-	
-	If _d3d11dev.CreateQuery(_querydesc,_query)<0
-		Throw "Critical Error!~nCannot create device query!"
-	EndIf
-	_d3d11devcon.Begin _query
-	
-	If Not _release _release = New TList
-	
-	_d3d11Refs:+1
-	Return True
-EndFunction
-
-Function CloseD3D11Device()
-	_d3d11Refs:-1
-	
-	If _d3d11Refs Return
-	
-	For Local ar:TD3D11Release = EachIn _release
-		If ar.unk ar.unk.Release_
-	Next
-	_release.Clear
-	_release = Null
-
-	If _query _query.Release_
-	
-	If _d3d11devcon _d3d11devcon.ClearState
-	
-	If _d3d11devcon _d3d11devcon.Release_
-	If _d3d11dev _d3d11dev.Release_
-	
-	_query = Null
-	_d3d11devcon = Null
-	_d3d11dev = Null
-EndFunction
+Global _Graphics:TD3D11Graphics
+Global _GraphicsDriver:TD3D11GraphicsDriver
+Global _GraphicsModes:TGraphicsMode[]
+Global _IsWindowed:Int
 
 Public
 
-Function D3D11GetFeatureLevel()
-	Return _featurelevel[0]
-EndFunction
+Type TGraphicsAdapter
+	Field Name:String
+	Field MajorVersion:Int
+	Field MinorVersion:Int
+	
+	Field DedicatedVideoMemory:Long
+	Field DedicatedSystemMemory:Long
+	Field SharedSystemMemory:Long
+	
+	Field UniqueId:Long
+EndType
 
 Type TD3D11Graphics Extends TGraphics
-	Field _width
-	Field _height
-	Field _depth
-	Field _hertz
-	Field _flags
-	Field _hwnd
-	Field _attached
-	Field _swapchain:IDXGISwapChain
-	Field _sd:DXGI_SWAP_CHAIN_DESC
-	Field _rendertargetview:ID3D11RenderTargetView
+	Field _Width:Int
+	Field _Height:Int
+	Field _Depth:Int
+	Field _Hertz:Int
+	Field _Flags:Int
+	Field _Hwnd:Int
+	Field _Attached:Int
+	Field _IsWindowed:Int
+	Field _GpuFeatureLevel:Int
+	Field _GpuResources:TD3D11GraphicsGpuResources = New TD3D11GraphicsGpuResources
 
 	Method GetDirect3DDevice:ID3D11Device()
-		Return _d3d11dev
+		Return _GpuResources.Device
 	EndMethod
 	
 	Method GetDirect3DDeviceContext:ID3D11DeviceContext()
-		Return _d3d11devcon
+		Return _GpuResources.DeviceContext
+	EndMethod
+	
+	Method GetBackBufferRenderTargetView:ID3D11RenderTargetView()
+		Return _GpuResources.BackBuffer
 	EndMethod
 	
 	'TGraphics
 	Method Driver:TD3D11GraphicsDriver()
-		Return _driver
+		Return _GraphicsDriver
 	EndMethod
 	
 	'TGraphics
-	Method GetSettings( width Var,height Var,depth Var,hertz Var,flags Var)
-		width = _width
-		height = _height
-		depth = _depth
-		hertz = _hertz
-		flags = _flags
+	Method GetSettings(Width:Int Var, Height:Int Var, Depth:Int Var, Hertz:Int Var, Flags:Int Var)
+		Width = _Width
+		Height = _Height
+		Depth = _Depth
+		Hertz = _Hertz
+		Flags = _Flags
 	EndMethod
 	
 	'TGraphics
 	Method Close()
-		If Not _hwnd Return
+		If Not _Hwnd..
+			Return
 	
-		If _swapchain _swapchain.SetFullScreenState False,Null
+		If _GpuResources.SwapChain..
+			_GpuResources.Swapchain.SetFullScreenState False,Null
 		
-		If _rendertargetview _rendertargetview.Release_
-		If _swapchain _swapchain.Release_
-
-		CloseD3D11Device
+		_GpuResources.Close()
 		
-		If Not _attached DestroyWindow(_hwnd)
-		_hwnd = Null
-		
-		_windowed = False
+		If Not _attached..
+			DestroyWindow(_hwnd)
+	
+		_Hwnd = 0	
+		_IsWindowed = False
 	EndMethod
 	
-	Method Attach:TD3D11Graphics( hwnd ,flags )
-		Local rect[4]
-		GetClientRect hwnd,rect
-		Local width=rect[2]-rect[0]
-		Local height=rect[3]-rect[1]
+	Method Attach:TD3D11Graphics(hwnd:Int, flags:Int)
+		Local rect:Int[4]
 		
-		CreateD3D11Device()
-		CreateSwapChain(hwnd,width,height,0,0,flags)
+		GetClientRect(hwnd, rect)
+		Local width:Int = rect[2] - rect[0]
+		Local height:Int = rect[3] - rect[1]
+		
+		If Not CreateD3D11Device()..
+			Return Null
 
-		_hwnd=hwnd
-		_width=width
-		_height=height
-		_flags=flags
-		_attached=True
+		If Not CreateSwapChain(hwnd, width, height, 0, 0, flags)..
+			Return Null
+
+		_hwnd = hwnd
+		_width = width
+		_height = height
+		_flags = flags
+		_attached = True
 		
 		Return Self
 	EndMethod
 	
-	Method Create:TD3D11Graphics(width,height,depth,hertz,flags)
-		If _depth Return Null 'Already have a window thats full screen
+	Method Create:TD3D11Graphics(Width:Int, Height:Int, Depth:Int, Hertz:Int, Flags:Int)
+		' Use a normal window that's fullscreen
+		If _Depth..
+			Return Null
 
-		'register wndclass
-		Local WNDCLASS:WNDCLASSW=New WNDCLASSW
-		WNDCLASS.hInstance=GetModuleHandleW( Null )
-		WNDCLASS.lpfnWndProc=D3D11WndProc
-		WNDCLASS.hCursor=LoadCursorW( Null,Short Ptr IDC_ARROW )
-		WNDCLASS.lpszClassName=_wndClass.ToWString()
-		RegisterClassW WNDCLASS
-		MemFree WNDCLASS.lpszClassName
-
-		'Create the window
-		Local wstyle = WS_VISIBLE|WS_POPUP
-
-		'centre window on screen
-		Local rect[4]
-		If Not depth
-			wstyle = WS_VISIBLE|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX
-
-			Local desktoprect[4]
-
-			GetWindowRect( GetDesktopWindow() , desktoprect )
-
-			rect[0]=desktopRect[2]/2-width/2		
-			rect[1]=desktopRect[3]/2-height/2
-			rect[2]=rect[0]+width
-			rect[3]=rect[1]+height
-
-			AdjustWindowRect rect,wstyle,0
-
-			_windowed = True
-		Else
-			rect[2] = width
-			rect[3] = height
-
-			_windowed = False
-		EndIf
-
-		Local hwnd=CreateWindowExW( 0,_wndClass,AppTitle,wstyle,rect[0],rect[1],rect[2]-rect[0],rect[3]-rect[1],0,0,GetModuleHandleW(Null),Null )
-		If Not hwnd Return Null
-
-		If Not CreateD3D11Device()
-			DestroyWindow hwnd
+		'register the window class with win32
+		Local WindowClass:String = "BBDX11Device Window Class"
+		Local WndClass:WNDCLASSW = New WNDCLASSW
+		WNDCLASS.hInstance = GetModuleHandleW(Null)
+		WNDCLASS.lpfnWndProc = D3D11WndProc
+		WNDCLASS.hCursor = LoadCursorW(Null, Short Ptr IDC_ARROW)
+		WNDCLASS.lpszClassName = WindowClass.ToWString()
+		Local Atom:Int = RegisterClassW(WndClass)
+		MemFree WndClass.lpszClassName
+		
+		If Not Atom
+			Throw("Failed to register win32 window class")
 			Return Null
 		EndIf
 
-		If Not depth
-			GetClientRect hwnd,rect
-			width=rect[2]-rect[0]
-			height=rect[3]-rect[1]
+		'Create the window
+		Local wStyle:Int = WS_VISIBLE | WS_POPUP
+
+		'centre window on screen
+		Local Rect:Int[4]
+		If Not Depth
+			' Windowed window
+			If Not (Flags & 128)..
+				wStyle = WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
+
+			Local DesktopRect:Int[4]
+			GetWindowRect(GetDesktopWindow(), DesktopRect)
+
+			' Put the app window in the centre of the desktop window
+			Rect[0] = DesktopRect[2] / 2 - Width / 2
+			Rect[1] = DesktopRect[3] / 2 - Height / 2
+			Rect[2] = Rect[0] + Width
+			Rect[3] = Rect[1] + Height
+
+			AdjustWindowRect(Rect, Wstyle, 0)
+			_IsWindowed = True
+		Else
+			' Full screen
+			Rect[2] = Width
+			Rect[3] = Height
+
+			_IsWindowed = False
 		EndIf
 
-		If Not _depth
-			CreateSwapChain(hwnd,width,height,depth,hertz,flags)
+		Local Hwnd:Int = CreateWindowExW(0, WindowClass, AppTitle, wStyle, Rect[0], Rect[1], Rect[2] - Rect[0], Rect[3] - Rect[1], 0, 0, GetModuleHandleW(Null), Null)
+		If Not Hwnd..
+			Return Null
+
+		If Not CreateD3D11Device()
+			DestroyWindow(Hwnd)
+			Return Null
 		EndIf
 
-		_hwnd=hwnd
-		_width=width
-		_height=height
-		_depth=depth
-		_hertz=hertz
-		_flags=flags
+		If Not Depth
+			' Get the real size of the windows that Windows has created
+			GetClientRect(Hwnd, Rect)
+			Width = Rect[2] - Rect[0]
+			height = Rect[3] - Rect[1]
+		EndIf
+
+		If Not _Depth..
+			CreateSwapChain(Hwnd, Width, Height, Depth, Hertz, Flags)
+
+		_Hwnd = Hwnd
+		_Width = Width
+		_Height = Height
+		_Depth = Depth
+		_Hertz = Hertz
+		_Flags = Flags
 
 		Return Self
 	EndMethod
 	
-	Method CreateSwapChain(hwnd,width,height,depth,hertz,flags)
-		Local FullScreenTarget:TGraphicsMode
-		Local numerator = 0
+	Function D3D11WndProc:Int(Hwnd:Int, Msg:Int, Wp:Int, Lp:Int)"win32"
+		bbSystemEmitOSEvent(Hwnd, Msg, Wp, Lp, Null)
+		
+		Select Msg
+		Case WM_CLOSE
+			Return 0
+		Case WM_SYSKEYDOWN
+			If Wp <> KEY_F4..
+				Return 0
+			
+		Case WM_ACTIVATE
+			If _Graphics..
+				_Graphics.Reactivate(Wp)
+	
+			Return 0
+		EndSelect
+		
+		Return DefWindowProcW(Hwnd, Msg, Wp, Lp)
+	End Function
 
-		If depth
-			Local index
-			For Local i:TGraphicsMode = EachIn GraphicsModes()
-				If width = i.Width
-					If height = i.height
-						If depth = i.depth
-							If hertz = i.hertz
-								FullScreenTarget = _modes[index]
+	' TD3D11Graphics
+	Method CreateD3D11Device:Int()
+	
+		Local CreationFlag:Int = D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_BGRA_SUPPORT
+?Debug
+		'CreationFlag :| D3D11_CREATE_DEVICE_DEBUG
+?
+		Local FeatureLevel:Int
+		Local Device:ID3D11Device
+		Local DeviceContext:ID3D11DeviceContext
+
+		Local AdapterToUse:TGraphicsAdapter = D3D11GraphicsDriver().GetGraphicsAdapter()
+		Local DxgiAdapter:IDXGIAdapter
+		Local DriverType:Int
+
+		If AdapterToUse
+			DxgiAdapter = D3D11GraphicsDriver().GetDXGIAdapterByLuid(AdapterToUse.UniqueId)
+			DriverType = D3D_DRIVER_TYPE_UNKNOWN
+		Else
+			DriverType = D3D_DRIVER_TYPE_HARDWARE
+		EndIf
+		
+		If D3D11CreateDevice(DxgiAdapter, DriverType, Null, CreationFlag, Null, 0, D3D11_SDK_VERSION, Varptr Device, Varptr FeatureLevel, Varptr DeviceContext) < 0
+			Throw "Critical Error!~nCould not create D3D11Device for the default adapter"
+			Return False	
+		EndIf
+			
+		If FeatureLevel < D3D_FEATURE_LEVEL_11_0
+			SAFE_RELEASE(DeviceContext)
+			SAFE_RELEASE(Device)
+
+			Throw	"Critical Error!~n" +..
+					"Make sure your GPU is Dx11 compatible or~n" +..
+					"Make sure you have the latest drivers for your GPU."
+					
+			Return False
+		EndIf
+		
+		_GpuResources.Device = Device
+		_GpuResources.DeviceContext = DeviceContext
+		_GpuFeatureLevel = FeatureLevel
+		
+		Return True
+	EndMethod
+	
+	Method CreateSwapChain:Int(Hwnd:Int, Width:Int, Height:Int, Depth:Int, Hertz:Int, Flags:Int)
+		Local IsWindowed:Int = False
+		Local FullScreenTarget:TGraphicsMode
+
+		If Depth
+			Local Index:Int
+			Local Modes:TGraphicsMode[] = GraphicsModes()
+			For Local i:TGraphicsMode = EachIn Modes
+				If Width = i.Width
+					If Height = i.height
+						If Depth = i.depth
+							If Hertz = i.hertz
+								FullScreenTarget = Modes[Index]
 								Exit
 							EndIf
 						EndIf
 					EndIf
 				EndIf
 				
-				index:+1
+				Index :+ 1
 			Next
-		EndIf
-
-		_sd = New DXGI_SWAP_CHAIN_DESC
-		_sd.BufferCount = 1 'MSDN conflicting information on this parameter
-		_sd.BufferDesc_Width = width
-		_sd.BufferDesc_Height = height
-	
-		If depth And FullScreenTarget
-			_sd.BufferDesc_Format = DXGI_FORMAT_R8G8B8A8_UNORM
-			_sd.BufferDesc_RefreshRate_Numerator = FullscreenTarget.Hertz
-			_sd.BufferDesc_RefreshRate_Denominator = 1
-			_sd.BufferDesc_Scaling = 0
-			_sd.BufferDesc_ScanlineOrdering = 0
 		Else
-			_sd.BufferDesc_Format = DXGI_FORMAT_R8G8B8A8_UNORM 'Standard 32bit display
-			_sd.BufferDesc_RefreshRate_Numerator = 0
-			_sd.BufferDesc_RefreshRate_Denominator = 1
-			_sd.BufferDesc_Scaling = 0
-			_sd.BufferDesc_ScanlineOrdering = 0
+			IsWindowed = True
 		EndIf
 
-		_sd.Windowed = _windowed
-					
-		_sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
-		_sd.OutputWindow = hwnd
-		_sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD
-		_sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
-		_sd.SampleDesc_Count = 1
-		_sd.SampleDesc_Quality = 0
+		Local SwapchainDesc:DXGI_SWAP_CHAIN_DESC = New DXGI_SWAP_CHAIN_DESC
+		SwapchainDesc.BufferCount = 2
+		SwapchainDesc.BufferDesc_Format = DXGI_FORMAT_B8G8R8A8_UNORM
+		SwapchainDesc.BufferDesc_Width = width
+		SwapchainDesc.BufferDesc_Height = height
+		SwapchainDesc.BufferDesc_Scaling = 0
+		SwapchainDesc.BufferDesc_ScanlineOrdering = 0
+		SwapchainDesc.BufferDesc_RefreshRate_Denominator = 1
+		SwapchainDesc.Windowed = IsWindowed
+		SwapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
+		SwapchainDesc.OutputWindow = Hwnd
+		SwapchainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		SwapchainDesc.SampleDesc_Count = 1
+		SwapchainDesc.SampleDesc_Quality = 0
+
+		If Depth And FullScreenTarget
+			SwapchainDesc.BufferDesc_RefreshRate_Numerator = FullscreenTarget.Hertz
+			SwapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL
+		Else
+			SwapchainDesc.BufferDesc_RefreshRate_Numerator = 0
+			SwapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD
+		EndIf
 
 		Local Factory:IDXGIFactory
-		Local Adapter:IDXGIAdapter
-		Local Device:IDXGIDevice
-	
-		_d3d11dev.QueryInterface(IID_IDXGIDevice,Byte Ptr Ptr(Varptr Device))
-		Device.GetParent(IID_IDXGIAdapter,Adapter)
-		Adapter.GetParent(IID_IDXGIFactory,Factory)
-	
-		If Factory.CreateSwapChain(_d3d11dev,_sd,_swapchain)<0
-			Throw "Critical Error!~nCannot create swap chain"
-		EndIf
+		Local Adapter1:IDXGIAdapter1
+		Local Device1:IDXGIDevice1
 
-		If depth
-			_swapchain.SetFullscreenState(True,Null)
+		If _GpuResources.Device.QueryInterface(IID_IDXGIDevice1, Byte Ptr Ptr(Varptr Device1)) < 0
+			Throw("Could not query for device1 interface")
+			Return False
 		EndIf
 		
-		_swapchain.ResizeTarget(_sd)
-		'_swapchain.ResizeBuffers(0,0,0,DXGI_FORMAT_UNKNOWN,0)
+		Device1.GetParent(IID_IDXGIAdapter1, Byte Ptr Ptr (Varptr Adapter1))
+		If Not Adapter1
+			SAFE_RELEASE(Device1)
+			Throw("Could not query for adapter1 interface from device")
+			Return False
+		EndIf
 
-		'Factory.MakeWindowAssociation(hwnd,DXGI_MWA_NO_WINDOW_CHANGES)
-		Device.Release_
-		Adapter.Release_
-		Factory.Release_
+		Adapter1.GetParent(IID_IDXGIFactory, Byte Ptr Ptr (Varptr Factory))
+		If Not Factory
+			SAFE_RELEASE(Device1)
+			SAFE_RELEASE(Adapter1)
+			Throw("Could not query for factory interface from adapter")
+			Return False
+		EndIf
 
-		'Create a rendertarget
+		Local SwapChain:IDXGISwapchain
+		Local Hr:Int = Factory.CreateSwapChain(Device1, SwapchainDesc, Varptr Swapchain)
+		SAFE_RELEASE(Device1)
+		SAFE_RELEASE(Adapter1)
+		SAFE_RELEASE(Factory)
+		
+		If Hr < 0
+			Throw("Could not create swap chain")
+			Return False
+		EndIf
+
+		If Depth
+			Hr = Swapchain.SetFullscreenState(True, Null)
+		EndIf
+		
+		Hr = Swapchain.ResizeTarget(SwapchainDesc)
+		Hr = Swapchain.ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0)
+
+		' Get the back buffer
 		Local pBackBuffer:ID3D11Texture2D
-		If _swapchain.GetBuffer(0,IID_ID3D11Texture2D,pBackBuffer)<0
-			Throw "Critical Error!~nCannot create backbuffer"
-		EndIf
-		
-		If _d3d11dev.CreateRenderTargetView(pBackBuffer,Null,_rendertargetview)<0
-			Throw "Critical Error!~nCannot create RenderTargetView for rendering"
+		If Swapchain.GetBuffer(0, IID_ID3D11Texture2D, Byte Ptr Ptr(Varptr pBackBuffer)) < 0
+			Throw("Critical Error!~nCould not get back buffer texture")
+			Return False
 		EndIf
 
-		If pBackBuffer pBackBuffer.Release_()
-		pBackBuffer = Null
+		Local BackBufferRenderTargetView:ID3D11RenderTargetView
+		If _GpuResources.Device.CreateRenderTargetView(pBackBuffer, Null, Varptr BackBufferRenderTargetView) < 0
+			Throw("Critical Error!~nCould not create render target view for back buffer")
+			Return False
+		EndIf
 
-		_d3d11devcon.OMSetRenderTargets(1,Varptr _rendertargetview,Null)
-
-		'Create a viewport
-		Local vp:D3D11_VIEWPORT = New D3D11_VIEWPORT
-		vp.Width = width
-		vp.Height = height
-		vp.MinDepth = 0.0
-		vp.MaxDepth = 1.0
-		vp.TopLeftX = 0.0
-		vp.TopLeftY = 0.0
-		_d3d11devcon.RSSetViewports(1,vp)
+		_GpuResources.BackBuffer = BackBufferRenderTargetView
+		If Swapchain.QueryInterface(IID_IDXGISwapchain1, Varptr _GpuResources.Swapchain) < 0..
+			Return False
+			
+		SAFE_RELEASE(Swapchain)
+		SAFE_RELEASE(pBackBuffer)
 	EndMethod
 	
-	Method Flip( sync )
-		If sync
-			_swapchain.Present(1,0)
+	Method Flip(sync:Int)
+		Local PresentParameters:DXGI_PRESENT_PARAMETERS = New DXGI_PRESENT_PARAMETERS
+		If Sync
+			_GpuResources.Swapchain.Present1(1, 0, PresentParameters)
 		Else
-			_swapchain.Present(0,0)
+			_GpuResources.Swapchain.Present1(0, 0, PresentParameters)
 		EndIf
 	EndMethod
 	
-	Method GetFeatureLevel()
-		Return _FeatureLevel[0]
+	Method GetFeatureLevel:Int()
+		Return _GpuFeatureLevel
 	EndMethod
 	
-	Method Reactivate(wp)
-		If Not _windowed
-			If _swapchain _swapchain.SetFullscreenState(wp,Null)
-			If Not wp ShowWindow _hwnd,SW_MINIMIZE				
+	Method Reactivate(Wp:Int)
+		If Not _IsWindowed
+			If _GpuResources.Swapchain..
+				_GpuResources.Swapchain.SetFullscreenState(Wp, Null)
+			
+			' Wp = 0 = WA_INACTIVE
+			If Not Wp..
+				ShowWindow(_Hwnd, SW_MINIMIZE)
+
 		EndIf
-	EndMethod	
-	
-	Method AddRelease(unk:IUnknown)
-		Local ar:TD3D11Release = New TD3D11Release
-		ar.unk = unk
-		_release.AddLast ar
 	EndMethod
 EndType
 
 Type TD3D11GraphicsDriver Extends TGraphicsDriver
+	Field AllAdapters:TGraphicsAdapter[]
+	Field AdapterToUse:TGraphicsAdapter
+	
 	Method Create:TD3D11GraphicsDriver()
-		Local _Factory:IDXGIFactory
-		Local _Adapter:IDXGIAdapter
-		Local _Output:IDXGIOutput
-		Local _Device:IDXGIDevice
-		Local _SupportLevels[]
-		
-		If Not _d3d11 Return Null
-		If Not _DXGI Return Null
+		' Did the dll's load?
+		If Not _d3d11Dll Return Null
+		If Not _DXGIDll Return Null
 		If Not _d3dcompiler Return Null
-		
-		Rem
-				https://msdn.microsoft.com/en-us/library/windows/desktop/ff476082(v=vs.85).aspx
-				
-				Note:
-				If the Direct3D 11.1 runtime is present on the computer and pFeatureLevels is set to NULL,
-				this function won't create a D3D_FEATURE_LEVEL_11_1 device. To create a D3D_FEATURE_LEVEL_11_1 device,
-				you must explicitly provide a D3D_FEATURE_LEVEL array that includes D3D_FEATURE_LEVEL_11_1.
-				If you provide a D3D_FEATURE_LEVEL array that contains D3D_FEATURE_LEVEL_11_1 on a computer
-				that doesn't have the Direct3D 11.1 runtime installed, this function immediately fails with E_INVALIDARG.
-		EndRem
-		_SupportLevels = [D3D_FEATURE_LEVEL_11_0,D3D_FEATURE_LEVEL_10_1,D3D_FEATURE_LEVEL_10_0]
-		If D3D11CreateDevice(Null,D3D_DRIVER_TYPE_HARDWARE,Null,D3D11_CREATE_DEVICE_SINGLETHREADED,..
-							_SupportLevels,3,D3D11_SDK_VERSION,_d3d11dev,Varptr _featureLevel[0],_d3d11devcon)<0
-			Return Null
-		EndIf
-		
-		'Use the native Windows API to get the correct number of display modes available
-		'Dx11 API is inconsistent with HDTVs
-		Local Mode[4]
-		Local ModeNum,Result = -1
-		
-		While Result <> 0
-			Local ModeFound = False	
-			Result = Dx11Max2D_EnumDisplaySettings(ModeNum,Mode)
-			
-			'Don't include duplicates
-			For Local GMode:TGraphicsMode = EachIn _modes
-				If (Mode[0] = GMode.Width) And (Mode[1] = GMode.Height) ..
-					And (Mode[2] = GMode.Depth) And (Mode[3] = GMode.Hertz)
-			
-					ModeFound = True
-					ModeNum :+ 1
-					Exit
-				EndIf
-			Next
 
-			If Not ModeFound	
-				_modes = _modes[.._modes.Length + 1]
-				_modes[_modes.Length-1] = New TGraphicsMode
+		AllAdapters = GraphicsAdapters()
 
-				Local AllModes:TGraphicsMode[] = _modes
-				
-				_modes[_modes.Length-1].Width = Mode[0]
-				_modes[_modes.Length-1].Height = Mode[1]
-				_modes[_modes.Length-1].Depth = Mode[2]
-				_modes[_modes.Length-1].Hertz = Mode[3]
-		
-				ModeNum :+ 1
-			EndIf
-		Wend
-
-		'BUGFIX:
-		'Part of IDXGIAdapter.CheckInterfaceSupport work-around
-		If _Device _Device.Release_
-		If _d3d11devcon _d3d11devcon.Release_ ; _d3d11devcon = Null
-		If _d3d11dev _d3d11dev.Release_ ; _d3d11dev = Null
-		
 		Return Self
 	EndMethod
 	
-	'TGraphicsDriver
-	Method GraphicsModes:TGraphicsMode[]()
-		Return _modes
-	EndMethod
-	
-	Method AttachGraphics:TD3D11Graphics( hwnd , flags )
-		Return New TD3D11Graphics.Attach( hwnd , flags )
-	EndMethod
-	
-	Method CreateGraphics:TD3D11Graphics( width,height,depth,hertz,flags )
-		Return New TD3D11Graphics.Create(width,height,depth,hertz,flags)
-	EndMethod
-	
-	Method SetGraphics( g:TGraphics )
-		_graphics = TD3D11Graphics( g )
-	
-		If _graphics
-			Local vp:D3D11_VIEWPORT = New D3D11_VIEWPORT
-			vp.Width = _graphics._width
-			vp.Height = _graphics._height
-			vp.MinDepth = 0.0
-			vp.MaxDepth = 1.0
-			vp.TopLeftX = 0.0
-			vp.TopLeftY = 0.0
-			_d3d11devcon.RSSetViewports(1,vp)
+	Method GraphicsAdapters:TGraphicsAdapter[]()
+		Local SupportLevels:Int[] = [D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0]
+		Local ActualLevel:Int
 
-			_d3d11devcon.OMSetRenderTargets(1,Varptr _graphics._rendertargetview,Null)
-		EndIf
+		Local Factory:IDXGIFactory
+		If CreateDXGIFactory(IID_IDXGIFactory, Varptr Factory) < 0..
+			Return Null
+
+		Local Index:Int = 0
+		Local Adapter:IDXGIAdapter
+		Local AdapterList:TList = New TList
+		
+		While Factory.EnumAdapters(Index, Varptr Adapter) >= 0
+			If D3D11CreateDevice(Adapter, D3D_DRIVER_TYPE_UNKNOWN, Null, D3D11_CREATE_DEVICE_SINGLETHREADED, SupportLevels, SupportLevels.Length, D3D11_SDK_VERSION, Null, Varptr ActualLevel, Null) < 0
+				SAFE_RELEASE(Adapter)
+				Index :+ 1
+				Continue
+			EndIf
+			
+			Local DxgiDesc:DXGI_ADAPTER_DESC = New DXGI_ADAPTER_DESC
+			If Adapter.GetDesc(DxgiDesc) < 0
+				SAFE_RELEASE(Adapter)
+				Index :+ 1
+				Continue
+			EndIf
+						
+			' cache the gpu information
+			Local AdapterInfo:TGraphicsAdapter = New TGraphicsAdapter
+			AdapterInfo.Name = DxgiDesc.Description()
+			AdapterInfo.UniqueId = (DxgiDesc.LuidLow Shl 32) | DxgiDesc.LuidHigh
+			
+			AdapterInfo.DedicatedVideoMemory = DxgiDesc.DedicatedVideoMemory
+			If AdapterInfo.DedicatedVideoMemory < 0
+				AdapterInfo.DedicatedVideoMemory :~ $ffffffff00000000:Long
+			EndIf
+			
+			AdapterInfo.DedicatedSystemMemory = DxgiDesc.DedicatedSystemMemory 
+			If AdapterInfo.DedicatedSystemMemory < 0
+				AdapterInfo.DedicatedSystemMemory :~ $ffffffff00000000:Long
+			EndIf
+			
+			AdapterInfo.SharedSystemMemory = DxgiDesc.SharedSystemMemory 
+			If AdapterInfo.SharedSystemMemory < 0
+				AdapterInfo.SharedSystemMemory :~ $ffffffff00000000:Long
+			EndIf
+			
+			If ActualLevel = D3D_FEATURE_LEVEL_11_1
+				AdapterInfo.MajorVersion = 11
+				AdapterInfo.MinorVersion = 1
+
+			Else If ActualLevel = D3D_FEATURE_LEVEL_11_0
+				AdapterInfo.MajorVersion = 11
+				AdapterInfo.MinorVersion = 0
+				
+			Else If ActualLevel = D3D_FEATURE_LEVEL_10_1
+				AdapterInfo.MajorVersion = 10
+				AdapterInfo.MinorVersion = 1
+
+			Else If ActualLevel = D3D_FEATURE_LEVEL_10_0
+				AdapterInfo.MajorVersion = 10
+				AdapterInfo.MinorVersion = 0
+			EndIf
+
+			ListAddLast(AdapterList, AdapterInfo)
+			Index :+ 1
+			SAFE_RELEASE(Adapter)
+		Wend
+
+		SAFE_RELEASE(Factory)
+		
+		Return TGraphicsAdapter[](ListToArray(AdapterList))
 	EndMethod
 	
-	Method Flip( sync )
-		_graphics.Flip( sync )
-		
-		'Render lag fix
-		If Not _windowed
-			_d3d11devcon.End_(_query)
-			Local queryData:Int
-			While _d3d11devcon.GetData(_query,Varptr queryData,SizeOf(queryData),0) = 1
-			Wend
+	Method SetGraphicsAdapter(Adapter:TGraphicsAdapter)
+		AdapterToUse = Adapter
+	EndMethod
+	
+	Method GetGraphicsAdapter:TGraphicsAdapter()
+		Return AdapterToUse
+	EndMethod
+	
+	'TGraphicsDriver	
+	Method GraphicsModes:TGraphicsMode[]()
+		' no adapter selected? Use the default one
+		If Not AdapterToUse
+			AdapterToUse = GraphicsAdapters()[0]
 		EndIf
+		
+		If Not AdapterToUse
+			Throw ("No suitable graphics adapters found.")
+			Return Null
+		EndIf
+
+		Local DXGIAdapter:IDXGIAdapter = GetDXGIAdapterByLuid(AdapterToUse.UniqueId)
+		If Not DXGIAdapter
+			Throw ("Invalid adapter information.")
+			Return Null
+		EndIf
+
+		Local Outputs:IDXGIOutput[] = EnumerateDXGIOutputs(DXGIAdapter)
+		
+		For Local Output:IDXGIOutput = EachIn Outputs
+			Local DXGIModeCount:Int = 0
+			If Output.GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, Varptr DXGIModeCount, Null) < 0
+				Continue
+			EndIf
+			
+			If DXGIModeCount = 0
+				Continue
+			EndIf
+			
+			Local DXGIModesPtr:Byte Ptr = MemAlloc(DXGIModeCount * SizeOf DXGI_MODE_DESC)
+			If Output.GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, Varptr DXGIModeCount, DXGIModesPtr) < 0
+				Continue
+			EndIf
+			
+			Local DXGIModes:DXGI_MODE_DESC[] = New DXGI_MODE_DESC[DXGIModeCount]
+			For Local i:Int = 0 Until DXGIModeCount
+				DXGIModes[i] = New DXGI_MODE_DESC
+				MemCopy(DXGIModes[i], DXGIModesPtr, SizeOf(DXGI_MODE_DESC))
+				DXGIModesPtr :+ SizeOf(DXGI_MODE_DESC)
+			Next			
+			
+			Local ModeList:TList = New TList
+			For Local DXGIMode:DXGI_MODE_DESC = EachIn DXGIModes
+				Local Mode:TGraphicsMode = New TGraphicsMode
+				Mode.width = DXGIMode.Width
+				Mode.height = DXGIMode.Height
+				Mode.depth = 32
+				Mode.hertz = DXGIMode.RefreshRate_Numerator / DXGIMode.RefreshRate_Denominator
+				
+				ListAddLast(ModeList, Mode)
+			Next
+			
+			Return TGraphicsMode[](ListToArray(ModeList))
+		Next
+		
+		Return Null
+	EndMethod
+	
+	Method GetDXGIAdapterByLuid:IDXGIAdapter(Luid:Long)
+		DebugStop
+		Local Factory:IDXGIFactory
+		If CreateDXGIFactory(IID_IDXGIFactory, Varptr Factory) < 0
+			Throw("Could not create DXGIFactory.")
+			Return Null
+		EndIf
+
+		Local Index:Int = 0
+		Local DXGIAdapter:IDXGIAdapter
+		While Factory.EnumAdapters(Index, Varptr DXGIAdapter) >= 0
+			Local Desc:DXGI_ADAPTER_DESC = New DXGI_ADAPTER_DESC
+			If DXGIAdapter.GetDesc(Desc) < 0
+				DXGIAdapter.Release_(); DXGIAdapter = Null
+				Index :+ 1
+				Continue
+			EndIf
+			
+			If ((Desc.LuidLow Shl 32) | Desc.LuidLow) = Luid
+				Exit
+			EndIf
+
+			SAFE_RELEASE(DXGIAdapter)
+			
+			Index :+ 1
+		Wend
+		SAFE_RELEASE(Factory)
+				
+		Return DXGIAdapter
+	EndMethod
+	
+	Method EnumerateDXGIOutputs:IDXGIOutput[](DXGIAdapter:IDXGIAdapter)
+		Local Outputs:IDXGIOutput[]
+
+		Local Index:Int = 0
+		Local Output:IDXGIOutput
+		While DXGIAdapter.EnumOutputs(Index, Varptr Output) >= 0
+			Outputs = Outputs[..Outputs.Length + 1]
+			Outputs[Outputs.Length - 1] = Output
+			
+			Index :+ 1
+		Wend
+
+		Return Outputs
+	EndMethod
+
+	Method AttachGraphics:TD3D11Graphics(hwnd:Int, flags:Int)
+		Return New TD3D11Graphics.Attach(hwnd, flags)
+	EndMethod
+	
+	Method CreateGraphics:TD3D11Graphics(width:Int, height:Int, depth:Int, hertz:Int, flags:Int)
+		Return New TD3D11Graphics.Create(width, height, depth, hertz, flags)
+	EndMethod
+	
+	Method SetGraphics(g:TGraphics)
+		_Graphics = TD3D11Graphics(g)
+	EndMethod
+	
+	Method Flip(sync:Int)
+		_Graphics.Flip(sync)
 	EndMethod
 EndType
 
 Function D3D11GraphicsDriver:TD3D11GraphicsDriver()
-	Global _doneD3D11
-	If Not _doneD3D11
-		_driver = New TD3D11GraphicsDriver.Create()
-		If _driver _doneD3D11 = True
+	Global _DoneD3D11:Int
+	If Not _DoneD3D11
+		_GraphicsDriver = New TD3D11GraphicsDriver.Create()
+		If _GraphicsDriver..
+			_DoneD3D11 = True
 	EndIf
 
-	Return _driver
+	Return _GraphicsDriver
 EndFunction
 
-
 'EXPERIMENTAL...............
-Function D3D11ShowAllSupportedFeatures(InFormat=0)
-	Function YesNo$(value)
-		If value Return "Yes"
+Function D3D11ShowAllSupportedFeatures(InFormat:Int = 0)
+	Rem
+	Function YesNo:String(value:Int)
+		If value..
+			Return "Yes"
+
 		Return "No"
 	EndFunction
 	
@@ -545,7 +686,7 @@ Function D3D11ShowAllSupportedFeatures(InFormat=0)
 		WriteStdout "   ComputeShaders_Plus_RawAndStructuredBuffers_Via_Shader_4_x - "+YesNo(pD3D10XOptions.ComputeShaders_Plus_RawAndStructuredBuffers_Via_Shader_4_x)+"~n~n"
 	EndFunction
 	
-	Function CheckDataFormat(InFormat)
+	Function CheckDataFormat(InFormat:Int)
 		Local pFormatSupport:D3D11_FEATURE_DATA_FORMAT_SUPPORT = New D3D11_FEATURE_DATA_FORMAT_SUPPORT
 
 		pFormatSupport.InFormat = InFormat
@@ -560,7 +701,7 @@ Function D3D11ShowAllSupportedFeatures(InFormat=0)
 		WriteStdout EnumSupportFormat(pFormatSupport.OutFormatSupport)
 	EndFunction
 	
-	Function EnumSupportFormat$(Value)
+	Function EnumSupportFormat$(Value:Int)
 		Local Result$
 		
 		If Value & $1 Result =  "   D3D11_FORMAT_SUPPORT_BUFFER~n"
@@ -604,6 +745,7 @@ Function D3D11ShowAllSupportedFeatures(InFormat=0)
 	CheckDataDoubles
 	CheckD3D10XHardwareOptions
 	If InFormat CheckDataFormat(InFormat)
+	EndRem
 EndFunction
 ?
 

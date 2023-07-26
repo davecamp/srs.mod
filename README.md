@@ -8,6 +8,7 @@ To use this module download/clone to your pc and make this file structure:
 'BlitzMaxInstall'/mod/srs.mod/d3d11graphics.mod/
 'BlitzMaxInstall'/mod/srs.mod/d3d11max2d.mod/
 'BlitzMaxInstall'/mod/srs.mod/directx11.mod/
+'BlitzMaxInstall'/mod/srs.mod/dxgi.mod/
 ```
 
 Hit 'Build modules' from the 'Program' menu in the standard MaxIDE to build the module.

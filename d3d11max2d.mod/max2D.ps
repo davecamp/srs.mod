@@ -1,11 +1,17 @@
-cbuffer CMax2DFlags
+cbuffer CMax2DColor : register(b0)
 {
 	float4 inColor;
-	float4 inTexFlags;
+};
+
+cbuffer CMax2DFlags : register(b1)
+{
+	int 	inEnableAlphaTest;
+	float2	polyDimension;
+	float	spare;
 };
 
 Texture2D Tex;
-SamplerState SampleType;
+SamplerState SamplerType : register(s0);
 
 struct PixelInput
 {
@@ -13,26 +19,72 @@ struct PixelInput
 	float2 tex : TEXCOORD0;
 };
 
+float4 OvalPixelShader(PixelInput input) : SV_TARGET
+{
+	float4 outColor;
+	outColor = inColor;
+
+	float Distance = length(2 * input.tex - 1);
+	if(Distance >= 1.0)
+		clip(-1.0);
+
+	return outColor;
+
+}
+
 float4 ColorPixelShader(PixelInput input) : SV_TARGET
 {
 	float4 outColor;
 	outColor = inColor;
-	clip( outColor.a <= (inTexFlags.x*0.5) ? -1:1 );
+	clip( outColor.a <= (inEnableAlphaTest.x * 0.5) ? -1:1 );
 	return outColor;
 }
 
 float4 TexturePixelShader(PixelInput input) : SV_TARGET
 {
-	float4 outColor;
-	outColor = Tex.Sample(SampleType, input.tex) *inColor;
-	clip( outColor.a <= (inTexFlags.x*0.5) ? -1:1 );
+	float4 texColor = Tex.Sample(SamplerType, input.tex);
+	float4 outColor = texColor;
+
+	outColor.rgb *= inColor.rgb;
+	
+	if(inEnableAlphaTest == 1)
+		clip(outColor.a <= 0.5 ? -1:1);
+	else
+		outColor.a = texColor.a * inColor.a;	
+	
 	return outColor;
 }
 
 float4 PixmapPixelShader(PixelInput input) : SV_TARGET
 {
 	float4 outColor;
-	outColor = Tex.Sample(SampleType, input.tex);
+	outColor = Tex.Sample(SamplerType, input.tex);
 	return outColor;
 }
+
+float4 SolidPixelShader(PixelInput input) : SV_TARGET
+{
+	float4 outColor;
+	outColor = Tex.Sample(SamplerType, input.tex) * inColor.a;
+
+	if(outColor.r >= 0.0 || outColor.g >= 0.0 || outColor.g >= 0.0)
+		outColor.rgb = inColor.rgb;
+	
+	clip(outColor.a <= (inEnableAlphaTest* 0.5) ? -1:1);
+	return outColor;
+} 
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 

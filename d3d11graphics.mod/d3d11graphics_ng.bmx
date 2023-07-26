@@ -28,7 +28,7 @@ Global _release:TList
 Global _windowed:Int
 Global _fps:Int
 Global _d3d11Refs:Int
-Global _featurelevel:Int
+Global _featurelevel:Int[1]
 
 Type TD3D11Release
 	Field unk:IUnknown_
@@ -62,11 +62,11 @@ Function CreateD3D11Device:Int()
 	'?DEBUG
 	'	CreationFlag :| D3D11_CREATE_DEVICE_DEBUG
 	'?
-	If D3D11CreateDevice(Null, D3D_DRIVER_TYPE_HARDWARE, Null, CreationFlag, Null, 0, D3D11_SDK_VERSION, _d3d11dev, Varptr _featurelevel, _d3d11devcon) < 0
+	If D3D11CreateDevice(Null,D3D_DRIVER_TYPE_HARDWARE,Null,CreationFlag,Null,0,D3D11_SDK_VERSION,_d3d11dev,_featurelevel,_d3d11devcon)<0
 		Throw "Critical Error!~nCannot create D3D11Device"
 	EndIf
 	
-	If _FeatureLevel < D3D_FEATURE_LEVEL_10_0
+	If _FeatureLevel[0] < D3D_FEATURE_LEVEL_10_0
 		Throw	"Critical Error!~n"+..
 				"Make sure your GPU is Dx10/Dx11 compatible or~n"+..
 				"Make sure you have the latest drivers for your GPU."
@@ -113,7 +113,7 @@ EndFunction
 Public
 
 Function D3D11GetFeatureLevel:Int()
-	Return _featurelevel
+	Return _featurelevel[0]
 EndFunction
 
 Type TD3D11Graphics Extends TGraphics
@@ -142,7 +142,7 @@ Type TD3D11Graphics Extends TGraphics
 	EndMethod
 	
 	'TGraphics
-	Method GetSettings( width:Int Var,height:Int Var,depth:Int Var,hertz:Int Var,flags:Long Var, x:Int Var, y:Int Var )
+	Method GetSettings:Int( width:Int Var,height:Int Var,depth:Int Var,hertz:Int Var,flags:Int Var, X:Int Var, Y:Int Var)
 		width = _width
 		height = _height
 		depth = _depth
@@ -150,12 +150,12 @@ Type TD3D11Graphics Extends TGraphics
 		flags = _flags
 	EndMethod
 	
-	Method Position(x:Int, y:Int)
+	Method Position:Int(x:Int, y:Int)
 	End Method
 	
 	'TGraphics
-	Method Close()
-		If Not _hwnd Return
+	Method Close:Int()
+		If Not _hwnd Return 0
 	
 		If _swapchain _swapchain.SetFullScreenState False,Null
 		
@@ -170,7 +170,7 @@ Type TD3D11Graphics Extends TGraphics
 		_windowed = False
 	EndMethod
 	
-	Method Attach:TD3D11Graphics( hwnd:Byte Ptr ,flags:Long )
+	Method Attach:TD3D11Graphics( hwnd:Byte Ptr ,flags:Int )
 		Local rect:Int[4]
 		GetClientRect hwnd,rect
 		Local width:Int = rect[2]-rect[0]
@@ -188,7 +188,7 @@ Type TD3D11Graphics Extends TGraphics
 		Return Self
 	EndMethod
 	
-	Method Create:TD3D11Graphics(width:Int,height:Int,depth:Int,hertz:Int,flags:Long)
+	Method Create:TD3D11Graphics(width:Int,height:Int,depth:Int,hertz:Int,flags:Int)
 		If _depth Return Null 'Already have a window thats full screen
 
 		'register wndclass
@@ -208,9 +208,7 @@ Type TD3D11Graphics Extends TGraphics
 		'centre window on screen
 		Local rect:Int[4]
 		If Not depth
-			If Not (flags & GRAPHICS_BORDERLESS)
-				wstyle = WS_VISIBLE|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX
-			EndIf
+			wstyle = WS_VISIBLE|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX
 
 			Local desktoprect:Int[4]
 
@@ -259,14 +257,14 @@ Type TD3D11Graphics Extends TGraphics
 		Return Self
 	EndMethod
 	
-	Method CreateSwapChain(hwnd:Byte Ptr,width:Int,height:Int,depth:Int,hertz:Int,flags:Long)
+	Method CreateSwapChain(hwnd:Byte Ptr,width:Int,height:Int,depth:Int,hertz:Int,flags:Int)
 		Local FullScreenTarget:TGraphicsMode
 		Local numerator:Int = 0
 
 		If depth
 			Local index:Int
 			For Local i:TGraphicsMode = EachIn GraphicsModes()
-				If width = i.width
+				If width = i.Width
 					If height = i.height
 						If depth = i.depth
 							If hertz = i.hertz
@@ -305,7 +303,7 @@ Type TD3D11Graphics Extends TGraphics
 		_sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
 		_sd.OutputWindow = hwnd
 		_sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD
-		_sd.flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		_sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 		_sd.SampleDesc_Count = 1
 		_sd.SampleDesc_Quality = 0
 
@@ -347,8 +345,8 @@ Type TD3D11Graphics Extends TGraphics
 
 		'Create a viewport
 		Local vp:D3D11_VIEWPORT = New D3D11_VIEWPORT
-		vp.width = width
-		vp.height = height
+		vp.Width = width
+		vp.Height = height
 		vp.MinDepth = 0.0
 		vp.MaxDepth = 1.0
 		vp.TopLeftX = 0.0
@@ -365,7 +363,7 @@ Type TD3D11Graphics Extends TGraphics
 	EndMethod
 
 	Method GetFeatureLevel:Int()
-		Return _FeatureLevel
+		Return _FeatureLevel[0]
 	EndMethod
 
 	Method Reactivate(wp:WParam)
@@ -381,7 +379,7 @@ Type TD3D11Graphics Extends TGraphics
 		_release.AddLast ar
 	EndMethod
 	
-	Method Resize(width:Int, height:Int)
+	Method Resize:Int(Width:Int, Height:Int) Override
 	EndMethod
 EndType
 
@@ -399,9 +397,9 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 
 		'BUG FIX -	There's a bug in IDXGIAdapter.CheckInterfaceSupport incorrectly returning
 		'			that some valid DX11 cards don't support DX11.
-		_SupportLevels = [D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0]
-		If D3D11CreateDevice(Null, D3D_DRIVER_TYPE_HARDWARE, Null, D3D11_CREATE_DEVICE_SINGLETHREADED,..
-							_SupportLevels, 3, D3D11_SDK_VERSION, _d3d11dev, Varptr _featureLevel, _d3d11devcon)<0
+		_SupportLevels = [D3D_FEATURE_LEVEL_11_0,D3D_FEATURE_LEVEL_10_1,D3D_FEATURE_LEVEL_10_0]
+		If D3D11CreateDevice(Null,D3D_DRIVER_TYPE_HARDWARE,Null,D3D11_CREATE_DEVICE_SINGLETHREADED,..
+							_SupportLevels,3,D3D11_SDK_VERSION,_d3d11dev,Varptr _featureLevel[0],_d3d11devcon)<0
 			Return Null
 		EndIf
 		
@@ -416,7 +414,7 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 			
 			'Don't include duplicates
 			For Local GMode:TGraphicsMode = EachIn _modes
-				If (Mode[0] = GMode.width) And (Mode[1] = GMode.height) ..
+				If (Mode[0] = GMode.Width) And (Mode[1] = GMode.Height) ..
 					And (Mode[2] = GMode.Depth) And (Mode[3] = GMode.Hertz)
 			
 					ModeFound = True
@@ -431,8 +429,8 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 
 				Local AllModes:TGraphicsMode[] = _modes
 				
-				_modes[_modes.Length-1].width = Mode[0]
-				_modes[_modes.Length-1].height = Mode[1]
+				_modes[_modes.Length-1].Width = Mode[0]
+				_modes[_modes.Length-1].Height = Mode[1]
 				_modes[_modes.Length-1].Depth = Mode[2]
 				_modes[_modes.Length-1].Hertz = Mode[3]
 		
@@ -460,21 +458,21 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 		Return _modes
 	EndMethod
 	
-	Method AttachGraphics:TD3D11Graphics( hwnd:Byte Ptr , flags:Long )
+	Method AttachGraphics:TD3D11Graphics( hwnd:Byte Ptr , flags:Int )
 		Return New TD3D11Graphics.Attach( hwnd , flags )
 	EndMethod
 	
-	Method CreateGraphics:TD3D11Graphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Long, x:Int, y:Int )
+	Method CreateGraphics:TD3D11Graphics( width:Int,height:Int,depth:Int,hertz:Int,flags:Int, x:Int, y:Int )
 		Return New TD3D11Graphics.Create(width,height,depth,hertz,flags)
 	EndMethod
 	
-	Method SetGraphics( g:TGraphics )
+	Method SetGraphics:Int( g:TGraphics )
 		_graphics = TD3D11Graphics( g )
 	
 		If _graphics
 			Local vp:D3D11_VIEWPORT = New D3D11_VIEWPORT
-			vp.width = _graphics._width
-			vp.height = _graphics._height
+			vp.Width = _graphics._width
+			vp.Height = _graphics._height
 			vp.MinDepth = 0.0
 			vp.MaxDepth = 1.0
 			vp.TopLeftX = 0.0
@@ -495,10 +493,6 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 			While _d3d11devcon.GetData(_query,Varptr queryData,4,0) = 1
 			Wend
 		EndIf
-	EndMethod
-	
-	Method ToString:String() Override
-		Return "TD3D11GraphicsDriver"
 	EndMethod
 EndType
 

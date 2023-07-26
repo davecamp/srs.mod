@@ -14,10 +14,12 @@ ModuleInfo "Fixed helper function VerifyD3D11Max2DDriver() not returning a resul
 ModuleInfo "Fixed pixmaps being affected by other drawing commands - SetColor/SetAlpha etc"
 
 ?Not bmxng
+Import srs.dxgi
 Import "d3d11max2d_brl.bmx"
 ?
 
 ?bmxng
+Import srs.dxgi
 Import "d3d11max2d_ng.bmx"
 ?
 
