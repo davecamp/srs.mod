@@ -28,3 +28,6 @@ While Not KeyDown(KEY_ESCAPE)
   Flip
 Wend
 ```
+
+# Credit and huge thanks:
+Update inspiration and extensive Dx11Max2D testing done by Łukasz Kałuski
