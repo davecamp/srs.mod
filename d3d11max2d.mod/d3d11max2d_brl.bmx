@@ -1139,12 +1139,12 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 
 	Method Plot(x:Float, y:Float)
 		Global Vertices:Float[4]
-		TransformPoint x,y
+		TransformPoint x, y
 		x :+ focus_x
 		y :+ focus_y
 
-		Vertices[0] = x
-		Vertices[1] = y
+		Vertices[0] = x + 0.5
+		Vertices[1] = y + 0.5
 
 		_GpuState.SetPixelShader(_GpuResources.ColourPixelShader)
 		_GpuState.SetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST)
