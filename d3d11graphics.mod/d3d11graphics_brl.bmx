@@ -566,7 +566,6 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 	EndMethod
 	
 	Method GetDXGIAdapterByLuid:IDXGIAdapter(Luid:Long)
-		DebugStop
 		Local Factory:IDXGIFactory
 		If CreateDXGIFactory(IID_IDXGIFactory, Varptr Factory) < 0
 			Throw("Could not create DXGIFactory.")
