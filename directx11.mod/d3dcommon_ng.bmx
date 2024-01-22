@@ -11,7 +11,7 @@ Function IIDFromString(lpsz$w, lpiid:Byte Ptr) = "HRESULT IIDFromString(LPCOLEST
 
 Interface ID3DBlob Extends IUnknown_
 	Method GetBufferPointer:Byte Ptr()
-	Method GetBufferSize:Int()
+	Method GetBufferSize:Size_T()
 EndInterface
 EndExtern
 

@@ -35,6 +35,14 @@ Function SAFE_RELEASE(Iface:IUnknown_ Var)
 	Iface = Null
 EndFunction
 
+Function PointerToInt(Pointer:Byte Ptr, Array:Int Ptr)
+?x86
+	Array[0] = Int(Pointer)
+?x64
+	Array[0] = Long(Pointer) & $ffffffff
+	Array[1] = (Long(Pointer) & $ffffffff00000000:Long) Shr 32
+?
+EndFunction
 
 Type TGpuShaderSources
 	Field VertexShaderSource:String = LoadText("incbin::max2D.vs")
@@ -241,30 +249,25 @@ Type TD3D11Max2DResources
 
 ?win32x86
 		Local InputLayoutDesc:Int[] = [	0,0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0,..
-									0,0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0]
+										0,0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0]
 ?win32x64
 		Local InputLayoutDesc:Int[] = [	0,0,0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0,..
-									0,0,0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0]
+										0,0,0,DXGI_FORMAT_R32G32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0]
 ?
 		
 		Local Position:Byte Ptr = "POSITION".ToCString()
 		Local TexCoord:Byte Ptr = "TEXCOORD".TOCString()
-DebugStop
 ?win32x86
-		InputLayoutDesc[0] = Int(Position)
-		InputLayoutDesc[7] = Int(TexCoord)
+		PointerToInt(Position, Varptr InputLayoutDesc[0])
+		PointerToInt(TexCoord, Varptr InputLayoutDesc[7])
 ?win32x64
-		InputLayoutDesc[0] = Long(Position) & $ffffffff
-		InputLayoutDesc[1] = (Long(Position) & $ffffffff00000000:Long) Shr 32
-		InputLayoutDesc[8] = Long(TexCoord) & $ffffffff
-		InputLayoutDesc[9] = (Long(TexCoord) & $ffffffff00000000:Long) Shr 32
+		PointerToInt(Position, Varptr InputLayoutDesc[0])
+		PointerToInt(TexCoord, Varptr InputLayoutDesc[8])
 ?
-		DebugStop
 		Local Hr:Int = Device.CreateInputLayout(InputLayoutDesc, 2, ByteCode.GetBufferPointer(), ByteCode.GetBuffersize(), Varptr InputLayout)
-		
 		MemFree(Position)
 		MemFree(TexCoord)
-		
+
 		If Hr < 0
 			Throw("Cannot create shader input layout")
 			ByteCode.Release_()
@@ -868,8 +871,11 @@ Type TD3D11ImageFrame Extends TImageFrame
 		Local width#=pixmap.width
 		Local height#=pixmap.height
 		Local mipmapped:Int = (flags&MIPMAPPEDIMAGE=MIPMAPPEDIMAGE)
-		Local resData:Int[3]
 		Local mipindex:Int
+
+		' x86 PtrIntCount = 1, x64 PtrIntCount = 2
+		Local PtrIntCount:Int = SizeOf(pixmap.pixels) / 4
+		Local resData:Int[2 + PtrIntCount]
 
 		If pixmap.format<>PF_RGBA8888
 			pixmap = pixmap.Convert( PF_RGBA8888 )
@@ -877,9 +883,9 @@ Type TD3D11ImageFrame Extends TImageFrame
  
 		Local mips:TList = New TList
 		While pixmap.width > 0 And pixmap.height > 0
-			resData[mipindex] = Int(pixmap.pixels)
-			resData[mipindex+1] = pixmap.pitch
-			resData[mipindex+2] = pixmap.capacity
+			PointerToInt(pixmap.pixels, Varptr resData[mipIndex])
+			resData[mipindex + PtrIntCount] = pixmap.pitch
+			resData[mipindex + PtrIntCount + 1] = pixmap.capacity
 			
 			If Not mipmapped Exit
 			
