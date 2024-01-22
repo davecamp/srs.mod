@@ -49,16 +49,6 @@ Type TGraphicsAdapter
 	Field UniqueId:Long
 EndType
 
-
-
-
-
-
-
-
-
-
-
 Type TD3D11Graphics Extends TGraphics
 	Field _Width:Int
 	Field _Height:Int

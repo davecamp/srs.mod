@@ -1,9 +1,9 @@
 
-' Rewritten by Dave Camp July 2023
+' Rewritten by Dave Camp - January 2024
 
 SuperStrict
 
-?WIN32
+?Win32
 
 Import BRL.Max2D 
 Import BRL.TextStream
@@ -12,10 +12,11 @@ Import SRS.D3D11Graphics
 Incbin "max2D.vs"
 Incbin "max2D.ps"
 
+' Gpu state
 Global _GpuResources:TD3D11Max2DResources
 Global _GpuState:TGpuState
 
-'Max2D
+'Max2D state
 Const OneOver255# = 1.0 / 255.0
 
 Global DEV_DEBUG:Int = False
@@ -26,8 +27,9 @@ Global _linewidth#
 Global _width#,_height# 
 Global _currblend:Int
 Global _useSolidPixelShader:Int
+Global _currentRenderImageFrame:TD3D11RenderImageFrame
 
-Global _TD3D11ImageFrameList:TList
+' Incbin'ed shader source code
 Global _GpuShaderSources:TGpuShaderSources = New TGpuShaderSources
 
 Function SAFE_RELEASE(Iface:IUnknown_ Var)
@@ -69,16 +71,6 @@ Type TD3D11Max2DResources
 	Field ShadeBlendState:ID3D11BlendState
 	Field MaskBlendState:ID3D11BlendState
 	
-	Field DestAlphaBlendState:ID3D11BlendState
-	Field DestShadeBlendState:ID3D11BlendState
-	Field BlendOntoMaskBlendState:ID3D11BlendState
-	Field BlendMaskOntoImageBlendState:ID3D11BlendState
-	Field AlphaBlend2BlendState:ID3D11BlendState
-	Field LinearDodgeCopyBWBlendState:ID3D11BlendState
-	Field LinearDodgeCopyAlphaBlendState:ID3D11BlendState
-	Field BlendAlphaShapeBlendState:ID3D11BlendState
-	Field BlendAlphaShapeInvertedBlendState:ID3D11BlendState
-	
 	Field InputLayout:ID3D11InputLayout
 	Field VertexShader:ID3D11VertexShader
 	
@@ -104,17 +96,7 @@ Type TD3D11Max2DResources
 		If Not CreateBlendState("light blend", True, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, Varptr LightBlendState) Return Null
 		If Not CreateBlendState("shade blend", True, D3D11_BLEND_ZERO, D3D11_BLEND_SRC_COLOR, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, Varptr ShadeBlendState) Return Null
 		If Not CreateBlendState("solid blend", False, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, Varptr SolidBlendState) Return Null
-		
-		If Not CreateBlendState("dest alpha blend", True, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, Varptr DestAlphaBlendState) Return Null
-		If Not CreateBlendState("dest shade blend", True, D3D11_BLEND_ZERO, D3D11_BLEND_SRC_COLOR, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, Varptr DestShadeBlendState) Return Null
-		If Not CreateBlendState("blend onto mask", True, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_ZERO, D3D11_BLEND_SRC_ALPHA, Varptr BlendOntoMaskBlendState) Return Null
-		If Not CreateBlendState("blend mask onto image", True, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_SRC_ALPHA, Varptr BlendMaskOntoImageBlendState) Return Null
-		If Not CreateBlendState("alpha blend 2", True, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_INV_SRC_ALPHA, Varptr AlphaBlend2BlendState) Return Null
-		If Not CreateBlendState("linear dodge copy bw", True, D3D11_BLEND_DEST_COLOR, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, Varptr LinearDodgeCopyBWBlendState) Return Null
-		If Not CreateBlendState("linear dodge copy alpha", True, D3D11_BLEND_DEST_COLOR, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, Varptr LinearDodgeCopyAlphaBlendState) Return Null
-		If Not CreateBlendState("blend alpha shape", True, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_SRC_ALPHA, Varptr BlendAlphaShapeBlendState) Return Null
-		If Not CreateBlendState("blend alpha shape inverted", True, D3D11_BLEND_ZERO, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_INV_SRC_ALPHA, Varptr BlendAlphaShapeInvertedBlendState) Return Null
-		
+
 		If Not CreateVertexShaderAndInputLayout() Return Null
 		If Not CreatePixelShader("TexturePixelShader", Varptr TexturePixelShader) Return Null
 		If Not CreatePixelShader("ColorPixelShader", Varptr ColourPixelShader) Return Null
@@ -139,9 +121,9 @@ Type TD3D11Max2DResources
 			SubResourceData = New D3D11_SUBRESOURCE_DATA
 			SubResourceData.pSysMem = Data
 			
-			hr = Device.CreateBuffer(Desc, SubResourceData, Buffer)
+			Hr = Device.CreateBuffer(Desc, SubResourceData, Buffer)
 		Else
-			hr = Device.CreateBuffer(Desc, Null, Buffer)
+			Hr = Device.CreateBuffer(Desc, Null, Buffer)
 		EndIf
 		
 		If Hr < 0
@@ -257,6 +239,7 @@ Type TD3D11Max2DResources
 		
 		Local Position:Byte Ptr = "POSITION".ToCString()
 		Local TexCoord:Byte Ptr = "TEXCOORD".TOCString()
+
 ?win32x86
 		PointerToInt(Position, Varptr InputLayoutDesc[0])
 		PointerToInt(TexCoord, Varptr InputLayoutDesc[7])
@@ -264,6 +247,7 @@ Type TD3D11Max2DResources
 		PointerToInt(Position, Varptr InputLayoutDesc[0])
 		PointerToInt(TexCoord, Varptr InputLayoutDesc[8])
 ?
+
 		Local Hr:Int = Device.CreateInputLayout(InputLayoutDesc, 2, ByteCode.GetBufferPointer(), ByteCode.GetBuffersize(), Varptr InputLayout)
 		MemFree(Position)
 		MemFree(TexCoord)
@@ -430,7 +414,7 @@ Type TGpuState
 		
 		PixelShader = _gpuResources.TexturePixelShader
 		
-		' set initial default state
+		' Set initial default state
 		SetScissorRect(0, 0, GraphicsWidth(), GraphicsHeight())
 		RenderTargetView = BackBuffer
 		
@@ -475,7 +459,7 @@ Type TGpuState
 		If VertexArrayIndex > 0 And AllowDegenerates..
 			CreateDegenerates = True
 
-		' Is there room for 2 degenerate vertices?
+		' Is there room for 2 degenerate vertices? If not then flush
 		If VertexArrayIndex + VertexDataLength + 8 > MaximumVertexCount
 			Flush()
 			CreateDegenerates = False
@@ -658,7 +642,6 @@ Type TGpuState
 			Local Resource:ID3D11Resource
 			Local Texture:ID3D11Texture2D
 
-			'RenderTargetView.GetResource(ID3D11Resource Ptr (Varptr Resource))
 			RenderTargetView.GetResource(Varptr Resource)
 			If Resource
 				Resource.QueryInterface(IID_ID3D11Texture2D, Texture)
@@ -682,7 +665,7 @@ Type TGpuState
 	EndMethod
 	
 	Method EndFrame()
-		' set the vertex buffers
+		' set the vertex buffer and constant buffers for the next frame
 		FrameIndex :+ 1
 		FrameIndex :Mod MAX_FRAMES_IN_FLIGHT
 
@@ -712,7 +695,6 @@ Type TGpuState
 		RenderTargetView = RenderTarget
 
 		If ShaderResource And ShaderResource = ShaderResourceView
-			WriteStdout("Warning: Setting a render target that is bound as a texture causes the texture to be unbound.")
 			ShaderResourceView = Null
 			FlushState :| FLUSH_STATE_SHADER_RESOURCE_VIEW
 		EndIf
@@ -723,7 +705,6 @@ Type TGpuState
 		Local ShouldFlush:Int = False
 
 		If RenderTarget = RenderTargetView
-			WriteStdout("Warning: Setting a texture that is bound as a render target causes the render target to be unbound.")
 			RenderTargetView = Null
 			FlushState :| FLUSH_STATE_RENDER_TARGET_VIEW
 			ShouldFlush = True
@@ -856,6 +837,83 @@ EndType
 
 Public
 
+Type TD3D11RenderImageFrame Extends TD3D11ImageFrame
+	Field _width:Float
+	Field _height:Float
+	
+	Method Create:TD3D11RenderImageFrame(width:UInt, height:UInt, flags:Int)
+		If flags & FILTEREDIMAGE
+			_sampler = _gpuResources.LinearSamplerState
+		Else
+			_sampler = _gpuResources.PointSamplerState
+		EndIf
+		
+		Local TextureDesc:D3D11_TEXTURE2D_DESC = New D3D11_TEXTURE2D_DESC
+		TextureDesc.width = width
+		TextureDesc.height = height
+		TextureDesc.MipLevels = 1
+		TextureDesc.ArraySize = 1
+		TextureDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM
+		TextureDesc.SampleDesc_Count = 1
+		TextureDesc.SampleDesc_Quality = 0
+		TextureDesc.Usage = D3D11_USAGE_DEFAULT
+		TextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET
+		
+		If _gpuResources.Device.CreateTexture2D(TextureDesc, Null, Varptr _tex2D) < 0
+			Throw "Failed to create render image texture"
+			Return Null
+		EndIf
+		
+		If _gpuResources.Device.CreateShaderResourceView(_tex2D, Null, Varptr _srv) < 0
+			Throw "Failed to create a shader resource view for render image~n"
+			Return Null
+		EndIf
+		
+		If _gpuResources.Device.CreateRenderTargetView(_tex2D, Null, Varptr _rtv) < 0
+			Throw "Cannot use texture as a Render Texture~n"
+			Return Null
+		EndIf
+
+		_uscale = 1.0 / width
+		_vscale = 1.0 / height
+		_width = width
+		_height = height
+
+		Return Self
+	EndMethod
+	
+	Method ToPixmap:TPixmap(d3ddev:ID3D11Device, d3ddevcon:ID3D11DeviceContext)
+		Local TextureDesc:D3D11_TEXTURE2D_DESC = New D3D11_TEXTURE2D_DESC
+		_tex2D.GetDesc(TextureDesc)
+		
+		Local pixmap:TPixmap = CreatePixmap(TextureDesc.width, TextureDesc.height, PF_RGBA8888)
+
+		' create a temp resource
+		TextureDesc.Usage = D3D11_USAGE_STAGING
+		TextureDesc.BindFlags = 0
+		TextureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ
+		TextureDesc.MiscFlags = 0
+
+		Local StagingTexture:ID3D11Texture2D
+		d3ddev.CreateTexture2D(TextureDesc, Null, StagingTexture)
+		d3ddevcon.CopyResource(StagingTexture, _tex2D)
+
+		Local map:D3D11_MAPPED_SUBRESOURCE = New D3D11_MAPPED_SUBRESOURCE
+		d3ddevcon.Map(StagingTexture, 0, D3D11_MAP_READ, 0, map)
+		
+		For Local y:Int = 0 Until pixmap.height
+			Local dst:Byte Ptr = pixmap.pixels + y * pixmap.pitch
+			Local src:Byte Ptr = map.pData + y * map.RowPitch
+			MemCopy(dst, src, Size_T(pixmap.pitch))
+		Next
+		
+		d3ddevcon.UnMap(StagingTexture, 0)
+		StagingTexture.Release_()
+		
+		Return pixmap
+	EndMethod
+EndType
+
 Type TD3D11ImageFrame Extends TImageFrame 
 	Field _tex2D:ID3D11Texture2D
 	Field _srv:ID3D11ShaderResourceView
@@ -866,8 +924,6 @@ Type TD3D11ImageFrame Extends TImageFrame
 	Field _vertices:Float[16]
 		
 	Method Create:TImageFrame(pixmap:TPixmap, flags:Int)
-		If Not _TD3D11ImageFrameList _TD3D11ImageFrameList = New TList
-
 		Local width#=pixmap.width
 		Local height#=pixmap.height
 		Local mipmapped:Int = (flags&MIPMAPPEDIMAGE=MIPMAPPEDIMAGE)
@@ -944,13 +1000,12 @@ Type TD3D11ImageFrame Extends TImageFrame
 	
 		_seq=GraphicsSeq
 		
-		If flags&FILTEREDIMAGE
+		If flags & FILTEREDIMAGE
 			_sampler = _gpuResources.LinearSamplerState
 		Else
 			_sampler = _gpuResources.PointSamplerState
 		EndIf
-		
-		_TD3D11ImageFrameList.AddLast Self
+
 		Return Self
 	EndMethod
 	
@@ -1065,6 +1120,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 	Field tform_scr_ix#,tform_scr_iy#,tform_scr_jx#,tform_scr_jy#
 	Field stored_scr_rot#,stored_scale_x#,stored_scale_y#
 	Field focus_x#,focus_y#
+	Field backbuffer:TD3D11RenderImageFrame
 	
 	Method AdjustScreenRotationScale(tx:Float Var, ty:Float Var)
 		stored_scr_rot = _max2DGraphics.tform_rot
@@ -1157,19 +1213,6 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 	
 	Method SetGraphics(g:TGraphics)
 		If Not g
-			If _GpuState
-				Return
-				DebugStop
-				'_GpuState.ShutDown()
-			EndIf
-			
-			If _TD3D11ImageFrameList
-				For Local frame:TD3D11ImageFrame = EachIn _TD3D11ImageFrameList
-					frame.Destroy
-				Next
-			EndIf
-			_TD3D11ImageFrameList = Null
-
 			TMax2DGraphics.ClearCurrent()
 			D3D11GraphicsDriver().SetGraphics(Null)
 	
@@ -1190,6 +1233,12 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 
 		_GpuState = New TGpuState.Create(Device, DeviceContext, D3D11Graphics.GetBackBufferRenderTargetView())
 		Assert _GpuState
+
+		backbuffer = New TD3D11RenderImageFrame
+		backbuffer._rtv = D3D11Graphics.GetBackBufferRenderTargetView()
+		backbuffer._sampler = _gpuResources.LinearSamplerState
+		backbuffer._width = GraphicsWidth()
+		backbuffer._height = GraphicsHeight()
 
 		_max2DGraphics.MakeCurrent()
 		_driver = TD3D11Max2DDriver(_max2DDriver)
@@ -1255,7 +1304,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		Red = Max(Min(Red, 255), 0)
 		Green = Max(Min(Green, 255), 0)
 		Blue = Max(Min(Blue, 255), 0)
-		Alpha = Max(Min(Alpha, 255), 0)
+		Alpha = Max(Min(Alpha * 255, 255), 0)
 
 		_gpuState.SetClsColour(OneOver255 * Red, OneOver255 * Green, OneOver255 * Blue, OneOver255 * Alpha)
 	EndMethod
@@ -1581,10 +1630,10 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 	
 	Method SetResolution(width:Float, height:Float )
 		Global Projection:Float[] =..
-		 [2.0 / width,               0.0,       0.0,       -1.0,..
-		          0.0,     -2.0 / height,       0.0,        1.0,..
-		          0.0,               0.0,       0.0,        0.0,..
-		          0.0,               0.0,       0.0,        1.0]
+		[ 0.0, 0.0,       0.0,       -1.0,..
+		  0.0, 0.0,       0.0,        1.0,..
+		  0.0, 0.0,       0.0,        0.0,..
+		  0.0, 0.0,       0.0,        1.0]
 
  		Projection[0] =  2.0 / width
 		Projection[5] = -2.0 / height
@@ -1601,107 +1650,27 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 		Return Self
 	EndMethod
 	
-	' Render Image --------------------
-	'Method AssignBackBufferRenderImage()
-		'Local BackBufferRenderImageFrame:TD3D9RenderImageFrame = New TD3D9RenderImageFrame
-		'BackBufferRenderImageFrame._width = _gw
-		'BackBufferRenderImageFrame._height = _gh
-		'_d3dDev.GetBackBuffer(0, 0, 0, Varptr BackBufferRenderImageFrame._surface)
-	
-		' cache it
-		'_BackBufferRenderImageFrame = BackBufferRenderImageFrame
-		'_CurrentRenderImageFrame = _BackBufferRenderImageFrame
-		
-		'AddToRenderImageList(BackBufferRenderImageFrame)
-	'EndMethod
-	
-	'Method AddToRenderImageList(RenderImage:TD3D9RenderImageFrame)
-		'_RenderImageList.AddLast(RenderImage)
-	'EndMethod
-	
-	'Method RemoveFromRenderImageList(RenderImage:TD3D9RenderImageFrame)
-		'If(_RenderImageList.Contains(RenderImage))
-		'	_RenderImageList.Remove(RenderImage)
-		'EndIf
-	'EndMethod
-
+	' Render Image --------------------	
 	Method CreateRenderImageFrame:TImageFrame(width:UInt, height:UInt, flags:Int) Override
-		'Local RenderImage:TD3D9RenderImageFrame = TD3D9RenderImageFrame.Create(width, height, flags)
-		'AddToRenderImageList(RenderImage)
-		'Return RenderImage
+		Local RenderImage:TD3D11RenderImageFrame = New TD3D11RenderImageFrame.Create(width, height, flags)
+		Return RenderImage
 	EndMethod
 	
 	Method SetRenderImageFrame(RenderImageFrame:TImageFrame) Override
-	'	If RenderImageFrame = _CurrentRenderImageFrame
-	'		Return
-	'	EndIf
+		If RenderImageFrame = _CurrentRenderImageFrame..
+			Return
+	
+		Local D3D11RenderImageFrame:TD3D11RenderImageFrame = TD3D11RenderImageFrame(RenderImageFrame)
+		_gpuState.SetRenderTargetView(D3D11RenderImageFrame._rtv, D3D11RenderImageFrame._srv)
+		_CurrentRenderImageFrame = D3D11RenderImageFrame
 
-	'	Local D3D9RenderImageFrame:TD3D9RenderImageFrame = TD3D9RenderImageFrame(RenderImageFrame)
-	'	_d3dDev.SetRenderTarget(0, D3D9RenderImageFrame._surface)
-	'	_CurrentRenderImageFrame = D3D9RenderImageFrame
-		
-	'	Local vp:Rect = _D3D9Scissor_BMaxViewport
-	'	SetScissor(vp.x, vp.y, vp.width, vp.height)
-	'	SetMatrixAndViewportToCurrentRenderImage()
+		SetResolution(D3D11RenderImageFrame._width, D3D11RenderImageFrame._height)
 	EndMethod
 	
 	Method SetBackbuffer()
-		'SetRenderImageFrame(_BackBufferRenderImageFrame)
-	EndMethod
-	
-	'Function OnDeviceLost(obj:Object)
-	'	Local Driver:TD3D9Max2DDriver = TD3D9Max2DDriver(obj)
-	'	Local RenderImageList:TList = Driver._RenderImageList
-		
-	'	For Local RenderImage:TD3D9RenderImageFrame = EachIn RenderImageList
-	'		RenderImage.OnDeviceLost()
-	'	Next
-	'	Driver.RemoveFromRenderImageList(_BackBufferRenderImageFrame)
-	'EndFunction
-	
-	'Function OnDeviceReset(obj:Object)
-	'	Local Driver:TD3D9Max2DDriver = TD3D9Max2DDriver(obj)
-	'	Local RenderImageList:TList = Driver._RenderImageList
-
-	'	For Local RenderImage:TD3D9RenderImageFrame = EachIn RenderImageList
-	'		RenderImage.OnDeviceReset()
-	'	Next
-	'EndFunction
-		
-Private
-	'Field _RenderImageList:TList = New TList
-	
-	'Method SetMatrixAndViewportToCurrentRenderImage()
-	'	Local width:Float = _CurrentRenderImageFrame._width
-	'	Local height:Float = _CurrentRenderImageFrame._height
-		
-	'	Local matrix:Float[] = [..
-	'	2.0 / width, 0.0, 0.0, 0.0,..
-	'	0.0, -2.0/height, 0.0, 0.0,..
-	'	0.0, 0.0, 1.0, 0.0,..
-	'	-1 - (1.0 / width), 1 + (1.0 / height), 1.0, 1.0]
-
-	'	_d3dDev.SetTransform D3DTS_PROJECTION,matrix
-		
-	'	Local Viewport:D3DViewport9 = New D3DViewport9
-	'	Viewport.X = 0
-	'	Viewport.Y = 0
-	'	Viewport.width = width
-	'	Viewport.height = height
-	'	Viewport.MinZ = 0.0
-	'	Viewport.MaxZ = 1.0
-	'	_d3dDev.SetViewport(Viewport)
-	'EndMethod
-
-	'Method SetScissor(x:Int, y:Int, width:Int, height:Int)
-	'	If x = 0 And y = 0 And width = _CurrentRenderImageFrame._width And height = _CurrentRenderImageFrame._height
-	'		_d3dDev.SetRenderState(D3DRS_SCISSORTESTENABLE, False)
-	'	Else
-	'		_d3dDev.SetRenderState(D3DRS_SCISSORTESTENABLE, True)
-	'		Local Scissor:Rect = New Rect(x, y, x + width, y + height)
-	'		_d3dDev.SetScissorRect(Varptr Scissor)
-	'	EndIf
-	'EndMethod
+		_gpuState.SetRenderTargetView(BackBuffer._rtv, BackBuffer._srv)
+		SetResolution(BackBuffer._width, BackBuffer._height)
+	EndMethod		
 EndType
 
 Function D3D11Max2DDriver:TD3D11Max2DDriver()
