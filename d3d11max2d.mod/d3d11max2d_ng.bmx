@@ -1172,23 +1172,7 @@ Type TD3D11Max2DDriver Extends TMax2DDriver
 	'End of Screen rotation
 	
 	Method ToString$()
-		Local Feature$
-		Local FeatureLevel:Int
-		
-		'If _d3d11dev FeatureLevel = _d3d11dev.GetFeatureLevel()
-		FeatureLevel = _Graphics.GetFeatureLevel()
-	
-		Select FeatureLevel
-			Case D3D_FEATURE_LEVEL_11_0
-				Feature = "Using DirectX 11.0"
-			Case D3D_FEATURE_LEVEL_11_1
-				Feature = "Using DirectX 11.1"
-				
-			Case 0
-				Feature = " Graphics Not Initialised"
-		EndSelect
-		
-		Return "DirectX11 - "+Feature
+		Return "DirectX11"
 	EndMethod
 	
 	'TMaxGraphicsDriver
