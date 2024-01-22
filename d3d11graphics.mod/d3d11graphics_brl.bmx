@@ -15,10 +15,6 @@ Function SAFE_RELEASE(pUnknown:IUnknown Var)
 	pUnknown = Null
 EndFunction
 
-Extern
-Function Dx11Max2D_EnumDisplaySettings(iModeNum:Int, pMode:Byte Ptr)
-EndExtern
-
 Type TD3D11GraphicsGpuResources	
 	Field Device:ID3D11Device
 	Field DeviceContext:ID3D11DeviceContext
@@ -83,12 +79,12 @@ Type TD3D11Graphics Extends TGraphics
 	EndMethod
 	
 	'TGraphics
-	Method GetSettings(Width:Int Var, Height:Int Var, Depth:Int Var, Hertz:Int Var, Flags:Int Var)
-		Width = _Width
-		Height = _Height
+	Method GetSettings(width:Int Var, height:Int Var, Depth:Int Var, Hertz:Int Var, flags:Int Var)
+		width = _Width
+		height = _Height
 		Depth = _Depth
 		Hertz = _Hertz
-		Flags = _Flags
+		flags = _Flags
 	EndMethod
 	
 	'TGraphics
@@ -130,7 +126,7 @@ Type TD3D11Graphics Extends TGraphics
 		Return Self
 	EndMethod
 	
-	Method Create:TD3D11Graphics(Width:Int, Height:Int, Depth:Int, Hertz:Int, Flags:Int)
+	Method Create:TD3D11Graphics(width:Int, height:Int, Depth:Int, Hertz:Int, flags:Int)
 		' Use a normal window that's fullscreen
 		If _Depth..
 			Return Null
@@ -157,24 +153,24 @@ Type TD3D11Graphics Extends TGraphics
 		Local Rect:Int[4]
 		If Not Depth
 			' Windowed window
-			If Not (Flags & 128)..
+			If Not (flags & 128)..
 				wStyle = WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX
 
 			Local DesktopRect:Int[4]
 			GetWindowRect(GetDesktopWindow(), DesktopRect)
 
 			' Put the app window in the centre of the desktop window
-			Rect[0] = DesktopRect[2] / 2 - Width / 2
-			Rect[1] = DesktopRect[3] / 2 - Height / 2
-			Rect[2] = Rect[0] + Width
-			Rect[3] = Rect[1] + Height
+			Rect[0] = DesktopRect[2] / 2 - width / 2
+			Rect[1] = DesktopRect[3] / 2 - height / 2
+			Rect[2] = Rect[0] + width
+			Rect[3] = Rect[1] + height
 
 			AdjustWindowRect(Rect, Wstyle, 0)
 			_IsWindowed = True
 		Else
 			' Full screen
-			Rect[2] = Width
-			Rect[3] = Height
+			Rect[2] = width
+			Rect[3] = height
 
 			_IsWindowed = False
 		EndIf
@@ -191,19 +187,19 @@ Type TD3D11Graphics Extends TGraphics
 		If Not Depth
 			' Get the real size of the windows that Windows has created
 			GetClientRect(Hwnd, Rect)
-			Width = Rect[2] - Rect[0]
+			width = Rect[2] - Rect[0]
 			height = Rect[3] - Rect[1]
 		EndIf
 
 		If Not _Depth..
-			CreateSwapChain(Hwnd, Width, Height, Depth, Hertz, Flags)
+			CreateSwapChain(Hwnd, width, height, Depth, Hertz, flags)
 
 		_Hwnd = Hwnd
-		_Width = Width
-		_Height = Height
+		_Width = width
+		_Height = height
 		_Depth = Depth
 		_Hertz = Hertz
-		_Flags = Flags
+		_Flags = flags
 
 		Return Self
 	EndMethod
@@ -273,7 +269,7 @@ Type TD3D11Graphics Extends TGraphics
 		Return True
 	EndMethod
 	
-	Method CreateSwapChain:Int(Hwnd:Int, Width:Int, Height:Int, Depth:Int, Hertz:Int, Flags:Int)
+	Method CreateSwapChain:Int(Hwnd:Int, width:Int, height:Int, Depth:Int, Hertz:Int, flags:Int)
 		Local IsWindowed:Int = False
 		Local FullScreenTarget:TGraphicsMode
 
@@ -281,8 +277,8 @@ Type TD3D11Graphics Extends TGraphics
 			Local Index:Int
 			Local Modes:TGraphicsMode[] = GraphicsModes()
 			For Local i:TGraphicsMode = EachIn Modes
-				If Width = i.Width
-					If Height = i.height
+				If width = i.width
+					If height = i.height
 						If Depth = i.depth
 							If Hertz = i.hertz
 								FullScreenTarget = Modes[Index]
@@ -309,7 +305,7 @@ Type TD3D11Graphics Extends TGraphics
 		SwapchainDesc.Windowed = IsWindowed
 		SwapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT
 		SwapchainDesc.OutputWindow = Hwnd
-		SwapchainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		SwapchainDesc.flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 		SwapchainDesc.SampleDesc_Count = 1
 		SwapchainDesc.SampleDesc_Quality = 0
 
@@ -551,8 +547,8 @@ Type TD3D11GraphicsDriver Extends TGraphicsDriver
 			Local ModeList:TList = New TList
 			For Local DXGIMode:DXGI_MODE_DESC = EachIn DXGIModes
 				Local Mode:TGraphicsMode = New TGraphicsMode
-				Mode.width = DXGIMode.Width
-				Mode.height = DXGIMode.Height
+				Mode.width = DXGIMode.width
+				Mode.height = DXGIMode.height
 				Mode.depth = 32
 				Mode.hertz = DXGIMode.RefreshRate_Numerator / DXGIMode.RefreshRate_Denominator
 				

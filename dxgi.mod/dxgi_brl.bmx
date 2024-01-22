@@ -19,7 +19,7 @@ Type DXGI_SWAP_CHAIN_DESC
 	Field OutputWindow:Int
 	Field Windowed:Int
 	Field SwapEffect:Int
-	Field Flags:Int
+	Field flags:Int
 EndType
 
 Type DXGI_PRESENT_PARAMETERS
@@ -73,7 +73,7 @@ EndType
 
 Type IDXGIOutput Extends IDXGIObject
 	Method GetDesc:Int(pDesc:Byte Ptr)
-	Method GetDisplayModeList:Int(EnumFormat:Int, Flags:Int, pNumModes:Int Ptr, pDesc:Byte Ptr)
+	Method GetDisplayModeList:Int(EnumFormat:Int, flags:Int, pNumModes:Int Ptr, pDesc:Byte Ptr)
 	Method FindClosestMatchMode:Int(pModeToMatch:Byte Ptr, pClosestMatch:Byte Ptr, pConcernedDevice:IUnknown)
 	Method WaitForVBlank:Int()
 	Method TakeOwnership:Int(pDevice:IUnknown, Exclusive:Int)
@@ -87,12 +87,12 @@ Type IDXGIOutput Extends IDXGIObject
 EndType
 
 Type IDXGISwapChain Extends IDXGIDeviceSubObject
-	Method Present:Int(SyncInterval:Int, Flags:Int)
+	Method Present:Int(SyncInterval:Int, flags:Int)
 	Method GetBuffer:Int(Buffer:Int, riid:Byte Ptr, ppSurface:Byte Ptr Ptr)
 	Method SetFullscreenState:Int(FullScreen:Int, pTarget:IDXGIOutput)
 	Method GetFullscreenState:Int(pFullScreen:Int Ptr, ppTarget:IDXGiOutput Ptr)
 	Method GetDesc:Int(pDesc:Byte Ptr)
-	Method ResizeBuffers:Int(BufferCount:Int, Width:Int, Height:Int, NewFormat:Int, SwapChainFlags:Int)
+	Method ResizeBuffers:Int(BufferCount:Int, width:Int, height:Int, NewFormat:Int, SwapChainFlags:Int)
 	Method ResizeTarget:Int(pNewTargetParameters:Byte Ptr)
 	Method GetContainingOutput:Int(ppOutput:IDXGIOutput Ptr)
 	Method GetFrameStatistics:Int(pStats:Byte Ptr)
@@ -102,7 +102,7 @@ EndType
 Type IDXGISwapChain1 Extends IDXGISwapChain
 	Method GetDesc1:Int(pDesc:Byte Ptr)
 	Method GetFullscreenDesc:Int(pDesc:Byte Ptr)
-	Method GetHwnd:Int(pHwnd:Int Var)
+	Method GetHwnd:Int(pHwnd:Int Ptr)
 	Method GetCoreWindow:Int(refiid:Byte Ptr, ppUnknown:Byte Ptr Ptr)
 	Method Present1:Int(SyncInterval:Int, PresentFlags:Int, pPresentParameters:Byte Ptr)
 	Method IsTemporaryMonoSupported:Int()
@@ -115,7 +115,7 @@ EndType
 
 Type IDXGIFactory Extends IDXGIObject
 	Method EnumAdapters:Int(Adapter:Int, ppAdapter:IDXGIAdapter Ptr)
-	Method MakeWindowAssociation:Int(WindowHandle:Int, Flags:Int)
+	Method MakeWindowAssociation:Int(WindowHandle:Int, flags:Int)
 	Method GetWindowAssociation:Int(pWindowHandle:Int Ptr)
 	Method CreateSwapChain:Int(pDevice:IUnknown, pDesc:Byte Ptr, ppSwapChain:IDXGISwapChain Ptr)
 	Method CreateSoftwareAdapter:Int(Module_:Byte Ptr, ppAdapter:IDXGIAdapter Ptr)
@@ -156,4 +156,4 @@ Global IID_IDXGIDevice:Int[]=  [$54ec77fa,$44e61377,$fd88328c,$4cc8445f]
 Global IID_IDXGIDevice1:Int[]= [$77db970f,$48ba6276,$010728ba,$2c39b443]
 Global IID_IDXGISwapChain1:Int[] = [$790a45f7, $48760d42, $550a3a98, $aaf4e6cf]
 
-Global CreateDXGIFactory(riid:Byte Ptr, ppFactory:IDXGIFactory Ptr)"win32" = GetProcAddress(_DXGIDll,"CreateDXGIFactory")
+Global CreateDXGIFactory:Int(riid:Byte Ptr, ppFactory:IDXGIFactory Ptr)"win32" = GetProcAddress(_DXGIDll,"CreateDXGIFactory")

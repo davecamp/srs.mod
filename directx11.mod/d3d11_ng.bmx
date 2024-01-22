@@ -2,17 +2,17 @@ SuperStrict
 
 Import Pub.Win32
 
-Import "dxgi_ng.bmx"
-Import "d3dcommon.bmx"
+Import srs.dxgi
+Import "d3dcommon_ng.bmx"
 Import "d3d11.bmx"
 
 Extern"win32"
 
 Interface ID3D11DeviceChild Extends IUnknown_
-	Method GetDevice:Int()
-	Method GetPrivateData:Int()
-	Method SetPrivateData:Int()
-	Method SetPrivateDataInterface:Int()
+	Method GetDevice(Device:ID3D11Device Ptr)
+	Method GetPrivateData:Int(Guid:Byte Ptr, pDataSize:Int Ptr, pData:Byte Ptr)
+	Method SetPrivateData:Int(Guid:Byte Ptr, DataSize:Int, pData:Byte Ptr)
+	Method SetPrivateDataInterface:Int(Guid:Byte Ptr, pData:IUnknown_)
 EndInterface 
 
 Interface ID3D11DepthStencilState Extends ID3D11DeviceChild
@@ -28,8 +28,8 @@ Interface ID3D11RasterizerState Extends ID3D11DeviceChild
 EndInterface 
 
 Interface ID3D11Resource Extends ID3D11DeviceChild
-	Method GetType:Int()
-	Method SetEvictionPriority:Int()
+	Method GetType(pResourceDimension:Int Ptr)
+	Method SetEvictionPriority(EvictionPriority:Int)
 	Method GetEvictionPriority:Int()
 EndInterface 
 
@@ -50,7 +50,7 @@ Interface ID3D11Texture3D Extends ID3D11Resource
 EndInterface 
 
 Interface ID3D11View Extends ID3D11DeviceChild
-	Method GetResource:Int(ppResource:ID3D11Resource Var)
+	Method GetResource:Int(ppResource:ID3D11Resource Ptr)
 EndInterface 
 
 Interface ID3D11ShaderResourceView Extends ID3D11View
@@ -110,15 +110,15 @@ Interface ID3D11Counter Extends ID3D11Asynchronous
 EndInterface 
 
 Interface ID3D11ClassInstance Extends ID3D11DeviceChild
-	Method GetClassLinkage:Int(ppLinkage:ID3D11ClassLinkage Var)
+	Method GetClassLinkage:Int(ppLinkage:ID3D11ClassLinkage Ptr)
 	Method GetDesc:Int(pDesc:Byte Ptr)
 	Method GetInstanceName:Int(pInstanceName:Byte Ptr,pBufferLength:Int)
 	Method GetTypeName:Int(pTypeName:Byte Ptr,pBufferLength:Int)
 EndInterface 
 
 Interface ID3D11ClassLinkage Extends ID3D11DeviceChild
-	Method GetClassInstance:Int(pClassInstanceName:Byte Ptr,InstanceIndex:Int,ppInstance:ID3D11ClassInstance Var)
-	Method CreateClassInstance:Int(pszClassTypeName:Byte,ConstantBufferOffset:Int,ConstantVectorOffset:Int,TextureOffset:Int,SamplerOffset:Int,ppInstsance:ID3D11ClassInstance Var)
+	Method GetClassInstance:Int(pClassInstanceName:Byte Ptr,InstanceIndex:Int,ppInstance:ID3D11ClassInstance Ptr)
+	Method CreateClassInstance:Int(pszClassTypeName:Byte,ConstantBufferOffset:Int,ConstantVectorOffset:Int,TextureOffset:Int,SamplerOffset:Int,ppInstsance:ID3D11ClassInstance Ptr)
 EndInterface 
 
 Interface ID3D11CommandList Extends ID3D11DeviceChild
@@ -138,7 +138,7 @@ Interface ID3D11DeviceContext Extends ID3D11DeviceChild
 	Method PSSetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBuffers:Byte Ptr)
 	Method IASetInputLayout:Int(pInputLayout:ID3D11InputLayout)
 	Method IASetVertexBuffers:Int(StartSlot:Int,NumBuffers:Int,ppVertexBuffers:Byte Ptr,pStrides:Byte Ptr,pOffsets:Byte Ptr)
-	Method IASetIndexBuffer:Int(pIndexBuffer:ID3D11Buffer,Format:Int,Offset:Int)
+	Method IASetIndexBuffer:Int(pIndexBuffer:ID3D11Buffer,format:Int,offset:Int)
 	Method DrawIndexedInstanced:Int(IndexCountPerInstance:Int,InstanceCount:Int,StartIndexLocation:Int,BaseVertexLocation:Int,StartInstanceLocation:Int)
 	Method DrawInstanced:Int(VertexCountPerInstance:Int,InstanceCount:Int,StartVertexLocation:Int,StartInstanceLocation:Int)
 	Method GSSetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBuffers:Byte Ptr)
@@ -153,7 +153,7 @@ Interface ID3D11DeviceContext Extends ID3D11DeviceChild
 	Method GSSetShaderResources:Int(StartSlot:Int,NumViews:Int,ppShaderResourceViews:Byte Ptr)
 	Method GSSetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
 	Method OMSetRenderTargets:Int(NumViews:Int,ppRenderTargetViews:Byte Ptr,pDepthStencilView:Byte Ptr)
-	Method OMSetRendetTargetsAndUnorderedAccessViews:Int(NumViews:Int,ppRenderTargetViews:Byte Ptr,ppDepthStencilView:ID3D11DepthStencilView Var,UAVStartSlot:Int,NumUAVs:Int,ppUnorderedAccessViews:Byte Ptr)
+	Method OMSetRendetTargetsAndUnorderedAccessViews:Int(NumViews:Int,ppRenderTargetViews:Byte Ptr,ppDepthStencilView:ID3D11DepthStencilView Ptr,UAVStartSlot:Int,NumUAVs:Int,ppUnorderedAccessViews:Byte Ptr)
 	Method OMSetBlendState:Int(pBlendState:ID3D11BlendState,BlendFactor:Byte Ptr,SampleMask:Int)
 	Method OMSetDepthStencilState:Int(pDepthStencilState:ID3D11DepthStencilState,StencilRef:Int)
 	Method SOSetTargets:Int(NumBuffers:Int,ppSOTargets:Byte Ptr,pOffsets:Byte Ptr)
@@ -176,7 +176,7 @@ Interface ID3D11DeviceContext Extends ID3D11DeviceChild
 	Method GenerateMips:Int(pShaderResouceView:ID3D11ShaderResourceView)
 	Method SetResourceMinLOD:Int(pResource:ID3D11Resource,MinLOD#)
 	Method GetResourceMinLOD#(pResource:ID3D11Resource)
-	Method ResolveSubresource:Int(pDstResource:ID3D11Resource,DstSubresource:Int,pSrcResource:ID3D11Resource,SrcSubresource:Int,Format:Int)
+	Method ResolveSubresource:Int(pDstResource:ID3D11Resource,DstSubresource:Int,pSrcResource:ID3D11Resource,SrcSubresource:Int,format:Int)
 	Method ExecuteCommandList:Int(pCommandList:ID3D11CommandList,RestoreContextState:Int)
 	Method HSSetShaderResources:Int(StartSlot:Int,NumViews:Int,ppShaderResourceViews:Byte Ptr)
 	Method HSSetShader:Int(pShader:ID3D11HullShader,ppClassInstances:Byte Ptr,NumClassInstances:Int)
@@ -193,101 +193,102 @@ Interface ID3D11DeviceContext Extends ID3D11DeviceChild
 	Method CSSetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBuffers:Byte Ptr)
 	Method VSGetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBuffers:Byte Ptr)
 	Method PSGetShaderResources:Int(StartSlot:Int,NumBuffers:Int,ppShaderResourceViews:Byte Ptr)
-	Method PSGetShader:Int(ppPixelShader:ID3D11PixelShader Var,ppClassInstances:Byte Ptr,pNumClassInstances:Int Var)
+	Method PSGetShader:Int(ppPixelShader:ID3D11PixelShader Ptr,ppClassInstances:Byte Ptr,pNumClassInstances:Int Ptr)
 	Method PSGetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
-	Method VSGetShader:Int(ppVertexShader:ID3D11VertexShader Var,ppClassInstances:Byte Ptr,pNumClassInstances:Int Var)
+	Method VSGetShader:Int(ppVertexShader:ID3D11VertexShader Ptr,ppClassInstances:Byte Ptr,pNumClassInstances:Int Ptr)
 	Method PSGetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBufferS:Byte Ptr)
-	Method IAGetInputLayout:Int(ppInputLayout:ID3D11InputLayout Var)
+	Method IAGetInputLayout:Int(ppInputLayout:ID3D11InputLayout Ptr)
 	Method IAGetVertexBuffers:Int(StartSlot:Int,NumBuffers:Int,ppVertexBuffers:Byte Ptr,pStrides:Byte Ptr,pOffsets:Byte Ptr)
-	Method IAGetIndexBuffer:Int(pIndexBuffer:ID3D11Buffer Var,Format:Int,Offset:Int)
+	Method IAGetIndexBuffer:Int(pIndexBuffer:ID3D11Buffer Ptr,format:Int,offset:Int)
 	Method GSGetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBufferS:Byte Ptr)
-	Method GSGetShader:Int(ppGeometryShader:ID3D11GeometryShader Var,ppClassInstances:Byte Ptr,pNumClassInsstances:Byte Ptr)
-	Method IAGetPrimitiveTopology:Int(pTopology:Int Var)
+	Method GSGetShader:Int(ppGeometryShader:ID3D11GeometryShader Ptr,ppClassInstances:Byte Ptr,pNumClassInsstances:Byte Ptr)
+	Method IAGetPrimitiveTopology:Int(pTopology:Int Ptr)
 	Method VSGetShaderResources:Int(StartSlot:Int,NumBuffers:Int,ppShaderResourceViews:Byte Ptr)
 	Method VSGetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
-	Method GetPredication:Int(ppPredicate:ID3D11Predicate Var,pPredicateValue:Int Var)
+	Method GetPredication:Int(ppPredicate:ID3D11Predicate Ptr,pPredicateValue:Int Ptr)
 	Method GSGetShaderResources:Int(StartSlot:Int,NumBuffers:Int,ppShaderResourceViews:Byte Ptr)
 	Method GSGetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
 	Method OMGetRenderTargets:Int(NumViews:Int,ppRenderTargetViews:Byte Ptr,ppDepthStencilView:Byte Ptr)
 	Method OMGetRenderTargetsAndUnorderedAccessViews:Int(NumViews:Int,ppRenderTargetViews:Byte Ptr,ppDepthStencilView:ID3D11DepthStencilView,UAVStartSlot:Int,NumUAVs:Int,ppUnorderedAccessViews:Byte Ptr)
-	Method OMGetBlendState:Int(ppBlendState:ID3D11BlendState Var,BlendFactor:Byte Ptr,pSampleMask:Int Var)
-	Method OMGetDepthStencilState:Int(ppDepthStencilState:ID3D11DepthStencilState Var,pStencilRef:Int Var)
+	Method OMGetBlendState:Int(ppBlendState:ID3D11BlendState Ptr,BlendFactor:Byte Ptr,pSampleMask:Int Ptr)
+	Method OMGetDepthStencilState:Int(ppDepthStencilState:ID3D11DepthStencilState Ptr,pStencilRef:Int Ptr)
 	Method SOGetTargets:Int(NumBuffers:Int,ppSOTargets:Byte Ptr)
-	Method RSGetState:Int(ppRasterizerState:ID3D11RasterizerState Var)
-	Method RSGetViewports:Int(pNumViewports:Int Var,pViewports:Byte Ptr)
-	Method RSGetScissorRects:Int(pNumRects:Int Var,pRects:Byte Ptr)
+	Method RSGetState:Int(ppRasterizerState:ID3D11RasterizerState Ptr)
+	Method RSGetViewports:Int(pNumViewports:Int Ptr,pViewports:Byte Ptr)
+	Method RSGetScissorRects:Int(pNumRects:Int Ptr,pRects:Byte Ptr)
 	Method HSGetShaderResources:Int(StartSlot:Int,NumBuffers:Int,ppShaderResourceViews:Byte Ptr)
-	Method HSGetShader:Int(ppHullShader:ID3D11HullShader Var,ppClassInstances:Byte Ptr,pNumClassInstance:Int Var)
+	Method HSGetShader:Int(ppHullShader:ID3D11HullShader Ptr,ppClassInstances:Byte Ptr,pNumClassInstance:Int Ptr)
 	Method HSGetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
 	Method HSGetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBuffers:Byte Ptr)
 	Method DSGetShaderResources:Int(StartSlot:Int,NumBuffers:Int,ppShaderResourceViews:Byte Ptr)
-	Method DSGetShader:Int(ppDomainShader:ID3D11DomainShader Var,ppClassInstances:Byte Ptr,pNumClassInstance:Int Var)
+	Method DSGetShader:Int(ppDomainShader:ID3D11DomainShader Ptr,ppClassInstances:Byte Ptr,pNumClassInstance:Int Ptr)
 	Method DSGetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
 	Method DSGetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBufferS:Byte Ptr)
 	Method CSGetShaderResources:Int(StartSlot:Int,NumBuffers:Int,ppShaderResourceViews:Byte Ptr)
 	Method CSGetUnorderedAccessViews:Int(StartSlot:Int,NumUAVs:Int,ppUnorderedAccessViews:Byte Ptr)
-	Method CSGetShader:Int(ppComputeShader:ID3D11ComputeShader Var,ppClassInstances:Byte Ptr,pNumClassInstances:Int Var)
+	Method CSGetShader:Int(ppComputeShader:ID3D11ComputeShader Ptr,ppClassInstances:Byte Ptr,pNumClassInstances:Int Ptr)
 	Method CSGetSamplers:Int(StartSlot:Int,NumSamplers:Int,ppSamplers:Byte Ptr)
 	Method CSGetConstantBuffers:Int(StartSlot:Int,NumBuffers:Int,ppConstantBuffers:Byte Ptr)
 	Method ClearState:Int()
 	Method Flush:Int()
 	Method GetType:Int()
 	Method GetContextFlags:Int()
-	Method FinishCommandList:Int(RestoreDefferedContextState:Int,ppCommandList:ID3D11CommandList Var)
+	Method FinishCommandList:Int(RestoreDefferedContextState:Int,ppCommandList:ID3D11CommandList Ptr)
 EndInterface 
 
 Interface ID3D11Device Extends IUnknown_
-	Method CreateBuffer:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppBuffer:ID3D11Buffer Var)
-	Method CreateTexture1D:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppTexture1D:ID3D11Texture1D Var)
-	Method CreateTexture2D:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppTexture2D:ID3D11Texture2D Var)
-	Method CreateTexture3D:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppTexture3D:ID3D11Texture3D Var)
-	Method CreateShaderResourceView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppSRView:ID3D11ShaderResourceView Var)
-	Method CreateUnorderedAccessView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppUAView:ID3D11UnorderedAccessView Var)
-	Method CreateRenderTargetView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppRTView:ID3D11RenderTargetView Var)
-	Method CreateDepthStencilView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppDepthStencilView:ID3D11DepthStencilView Var)
-	Method CreateInputLayout:Int(pInputElementDescs:Byte Ptr,NumElements:Int,pShaderBytecodeWithInputSignature:Byte Ptr,BytecodeLength:Int,ppInputLayout:ID3D11InputLayout Var)
-	Method CreateVertexShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppVertexShader:ID3D11VertexShader Var)
-	Method CreateGeometryShader:Int(pShaderByteCode:Byte Ptr,ByteCodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppGeometryShader:ID3D11GeometryShader Var)
-	Method CreateGeometryShaderWithStreamOutput:Int(pShaderByteCode:Byte Ptr,ByteCodeLength:Int,pSODeclarations:Byte Ptr,NumEntries:Int,pBufferStrides:Byte Ptr,NumStrides:Int,RasterizedStream:Int,pClassLinkage:ID3D11ClassLinkage,ppGeometryShader:ID3D11GeometryShader Var)
-	Method CreatePixelShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppPixelShader:ID3D11PixelShader Var)
-	Method CreateHullShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppHullShader:ID3D11HullShader Var)
-	Method CreateDomainShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppDomainShader:ID3D11DomainShader Var)
-	Method CreateComputeShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppDomainShader:ID3D11ComputeShader Var)
-	Method CreateClassLinkage:Int(ppLinkage:ID3D11ClassLinkage Var)
-	Method CreateBlendState:Int(pBlendStateDesc:Byte Ptr,ppBlendState:ID3D11BlendState Var)
-	Method CreateDepthStencilState:Int(pDepthStencilDesc:Byte Ptr,ppDepthStencilState:ID3D11DepthStencilState Var)
-	Method CreateRasterizerState:Int(pRasterizerDesc:Byte Ptr,ppRasterizerState:ID3D11RasterizerState Var)
-	Method CreateSamplerState:Int(pSamplerDesc:Byte Ptr,ppSamplerState:ID3D11SamplerState Var)
-	Method CreateQuery:Int(pQueryDesc:Byte Ptr,ppQuery:ID3D11Query Var)
-	Method CreatePredicate:Int(pPredicateDesc:Byte Ptr,ppPredicate:ID3D11Predicate Var)
-	Method CreateCounter:Int(pCounterDesc:Byte Ptr,ppCounter:ID3D11Counter Var)
-	Method CreateDeferredContext:Int(ContextFlags:Int,ppDeferredContext:ID3D11DeviceContext Var)
-	Method OpenSharedResource:Int(hResource:Byte Ptr,ReturnedInterface:Byte Ptr,ppResource:IUnknown_ Var)
-	Method CheckFormatSupport:Int(Format:Int,pFormatSupport:Int Var)
-	Method CheckMultisampleQualityLevels:Int(Format:Int,SampleCount:Int,pNumQualityLevels:Int Var)
+	Method CreateBuffer:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppBuffer:ID3D11Buffer Ptr)
+	Method CreateTexture1D:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppTexture1D:ID3D11Texture1D Ptr)
+	Method CreateTexture2D:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppTexture2D:ID3D11Texture2D Ptr)
+	Method CreateTexture3D:Int(pDesc:Byte Ptr,pInitialData:Byte Ptr,ppTexture3D:ID3D11Texture3D Ptr)
+	Method CreateShaderResourceView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppSRView:ID3D11ShaderResourceView Ptr)
+	Method CreateUnorderedAccessView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppUAView:ID3D11UnorderedAccessView Ptr)
+	Method CreateRenderTargetView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppRTView:ID3D11RenderTargetView Ptr)
+	Method CreateDepthStencilView:Int(pResource:ID3D11Resource,pDesc:Byte Ptr,ppDepthStencilView:ID3D11DepthStencilView Ptr)
+	Method CreateInputLayout:Int(pInputElementDescs:Byte Ptr,NumElements:Int,pShaderBytecodeWithInputSignature:Byte Ptr,BytecodeLength:Int,ppInputLayout:ID3D11InputLayout Ptr)
+	Method CreateVertexShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppVertexShader:ID3D11VertexShader Ptr)
+	Method CreateGeometryShader:Int(pShaderByteCode:Byte Ptr,ByteCodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppGeometryShader:ID3D11GeometryShader Ptr)
+	Method CreateGeometryShaderWithStreamOutput:Int(pShaderByteCode:Byte Ptr,ByteCodeLength:Int,pSODeclarations:Byte Ptr,NumEntries:Int,pBufferStrides:Byte Ptr,NumStrides:Int,RasterizedStream:Int,pClassLinkage:ID3D11ClassLinkage,ppGeometryShader:ID3D11GeometryShader Ptr)
+	Method CreatePixelShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppPixelShader:ID3D11PixelShader Ptr)
+	Method CreateHullShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppHullShader:ID3D11HullShader Ptr)
+	Method CreateDomainShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppDomainShader:ID3D11DomainShader Ptr)
+	Method CreateComputeShader:Int(pShaderBytecode:Byte Ptr,BytecodeLength:Int,pClassLinkage:ID3D11ClassLinkage,ppDomainShader:ID3D11ComputeShader Ptr)
+	Method CreateClassLinkage:Int(ppLinkage:ID3D11ClassLinkage Ptr)
+	Method CreateBlendState:Int(pBlendStateDesc:Byte Ptr,ppBlendState:ID3D11BlendState Ptr)
+	Method CreateDepthStencilState:Int(pDepthStencilDesc:Byte Ptr,ppDepthStencilState:ID3D11DepthStencilState Ptr)
+	Method CreateRasterizerState:Int(pRasterizerDesc:Byte Ptr,ppRasterizerState:ID3D11RasterizerState Ptr)
+	Method CreateSamplerState:Int(pSamplerDesc:Byte Ptr,ppSamplerState:ID3D11SamplerState Ptr)
+	Method CreateQuery:Int(pQueryDesc:Byte Ptr,ppQuery:ID3D11Query Ptr)
+	Method CreatePredicate:Int(pPredicateDesc:Byte Ptr,ppPredicate:ID3D11Predicate Ptr)
+	Method CreateCounter:Int(pCounterDesc:Byte Ptr,ppCounter:ID3D11Counter Ptr)
+	Method CreateDeferredContext:Int(ContextFlags:Int,ppDeferredContext:ID3D11DeviceContext Ptr)
+	Method OpenSharedResource:Int(hResource:Byte Ptr,ReturnedInterface:Byte Ptr,ppResource:IUnknown_ Ptr)
+	Method CheckFormatSupport:Int(format:Int,pFormatSupport:Int Ptr)
+	Method CheckMultisampleQualityLevels:Int(format:Int,SampleCount:Int,pNumQualityLevels:Int Ptr)
 	Method CheckCounterInfo:Int(pCounterInfo:Byte Ptr)
-	Method CheckCounter:Int(pCounterDesc:Byte Ptr,ppCounter:ID3D11Counter Var)
+	Method CheckCounter:Int(pCounterDesc:Byte Ptr,ppCounter:ID3D11Counter Ptr)
 	Method CheckFeatureSupport:Int(Feature:Int,pFeatureSupportData:Byte Ptr,FeatureSupportDataSize:Int)
-	Method GetPrivateData:Int(guid:Byte Ptr,pDataSize:Int Var,pData:Byte Ptr)
+	Method GetPrivateData:Int(guid:Byte Ptr,pDataSize:Int Ptr,pData:Byte Ptr)
 	Method SetPrivateData:Int(guid:Byte Ptr,DataSize:Int,pData:Byte Ptr)
 	Method SetPrivateDataInterface:Int(guid:Byte Ptr,pData:Byte Ptr)
 	Method GetFeatureLevel:Int()
 	Method GetCreationFlags:Int()
 	Method GetDeviceRemovedReason:Int()
-	Method GetImmediateContext:Int(ppImmediateContext:ID3D11DeviceContext Var)
+	Method GetImmediateContext:Int(ppImmediateContext:ID3D11DeviceContext Ptr)
 	Method SetExceptionMode:Int(RaiseFlags:Int)
 	Method GetExceptionMode:Int()
 EndInterface 
 EndExtern
 
-Global _d3d11:Byte Ptr = LoadLibraryW("D3D11.dll")
-If Not _d3d11 Return False
+Global _d3d11Dll:Byte Ptr = LoadLibraryA("D3D11.dll")
+
+If Not _d3d11Dll Return Null
 
 'Core
-Global D3D11CreateDevice:Byte Ptr(pAdapter:IDXGIAdapter,DriverType:Int,hSoftware:Byte Ptr,Flags:Int,pFeatureLevels:Byte Ptr,Featurelevels:Int,SDKVersion:Int,ppDevice:ID3D11Device Var,..
-			pFeatureLevel:Byte Ptr,ppImmediateContext:ID3D11DeviceContext Var)"win32"=GetProcAddress(_d3d11,"D3D11CreateDevice")
-Global D3D11CreateDeviceAndSwapChain:Byte Ptr(pAdapter:IDXGIAdapter,DriverType:Int,Software:Int,Flags:Int,pFeatureLevels:Byte Ptr,FeatureLevels:Int,SDKVersion:Int,pSwapChainDesc:Byte Ptr,..
-			_pSwapChain:IDXGISwapChain Var,_ppDevice:ID3D11Device Var,pFeatureLevel:Byte Ptr,ppDeviceContext:ID3D11DeviceContext Var)"win32"=GetProcAddress(_d3d11,"D3D11CreateDeviceAndSwapChain")
+Global D3D11CreateDevice:Int(pAdapter:IDXGIAdapter,DriverType:Int,hSoftware:Byte Ptr,flags:Int,pFeatureLevels:Byte Ptr,Featurelevels:Int,SDKVersion:Int,ppDevice:ID3D11Device Ptr,..
+			pFeatureLevel:Byte Ptr,ppImmediateContext:ID3D11DeviceContext Ptr)"win32"=GetProcAddress(_d3d11Dll,"D3D11CreateDevice")
+Global D3D11CreateDeviceAndSwapChain:Int(pAdapter:IDXGIAdapter,DriverType:Int,Software:Int,flags:Int,pFeatureLevels:Byte Ptr,FeatureLevels:Int,SDKVersion:Int,pSwapChainDesc:Byte Ptr,..
+			_pSwapChain:IDXGISwapChain Ptr,_ppDevice:ID3D11Device Ptr,pFeatureLevel:Byte Ptr,ppDeviceContext:ID3D11DeviceContext Ptr)"win32"=GetProcAddress(_d3d11Dll,"D3D11CreateDeviceAndSwapChain")
 
 
 
